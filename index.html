@@ -660,7 +660,7 @@ class Component extends DCLogic {
     const top = Math.max(...live.map(t => t.v));
     const won = g.won || top >= target(n);
     const over = canMove(next, n) ? false : 'stuck';
-    if (this.state.haptics) haptic(over || gained >= 512 ? 'big' : gained ? 'merge' : 'move');
+    if (this.state.haptics) { const k = over || gained >= 512 ? 'big' : gained ? 'merge' : 'move'; if (this.start && !(navigator.vibrate && navigator.userActivation && navigator.userActivation.hasBeenActive)) this.pendingHap = k; else haptic(k); }
     const history = [...g.history, { tiles: g.tiles.filter(t => !t.gone), score: g.score, moves: g.moves }].slice(-10);
     const key = g.mode + '-' + n;
     const s = { ...(this.state.stats[key] || { best: 0, played: 0, tile: 0 }) };
@@ -746,8 +746,8 @@ class Component extends DCLogic {
   }
   swDown = e => { if (e.target.closest && e.target.closest('button')) return; this.start = { x: e.clientX, y: e.clientY, done: false }; };
   swMove = e => { const s = this.start; if (!s || s.done) return; const d = this.swipeDir(e, 14); if (d) { s.done = true; this.move(d); } };
-  swUp = e => { const s = this.start; if (s && !s.done) { const d = this.swipeDir(e, 10); if (d) this.move(d); } this.start = null; };
-  swCancel = () => { this.start = null; };
+  swUp = e => { const s = this.start; if (s && !s.done) { const d = this.swipeDir(e, 10); if (d) this.move(d); } this.start = null; if (this.pendingHap) { haptic(this.pendingHap); this.pendingHap = null; } };
+  swCancel = () => { this.start = null; this.pendingHap = null; };
 
   askBg(name) {
     const key = (name || '').trim().toLowerCase();
