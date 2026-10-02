@@ -298,6 +298,8 @@ a{color:var(--color-accent)}a:hover{color:var(--color-accent-300)}
 </div>
 </button>
 </sc-for>
+<button class="btn btn-secondary" style="min-height:48px;margin-top:6px;font-size:17px" onClick="{{ testHaptics }}"><i class="ph ph-vibrate" style="font-size:20px"></i>Test haptics</button>
+<div style="font-size:15px;color:var(--color-neutral-200);text-wrap:pretty;padding-top:4px">{{ hapNote }}</div>
 </div>
 
 <div style="display:flex;flex-direction:column;gap:8px;margin-top:auto">
@@ -426,18 +428,16 @@ const BGS = [
   { id: 'crab-sky', who: ['sophiphi'], label: 'Crab · sky', css: 'url(crab.png) center / cover no-repeat', dim: 'rgba(8,9,19,.4)' },
   { id: 'crab-clear', who: ['sophiphi'], label: 'Crab · night', css: 'url(crab-clear.png) center / cover no-repeat, ' + NIGHT, dim: 'rgba(8,9,19,.22)' },
 ];
-let hapLabel = null;
+function iosTap() {
+  const l = document.createElement('label'); l.setAttribute('aria-hidden', 'true'); l.style.display = 'none';
+  const i = document.createElement('input'); i.type = 'checkbox'; i.setAttribute('switch', '');
+  l.appendChild(i); document.head.appendChild(l); l.click(); document.head.removeChild(l);
+}
 function haptic(kind) {
   try {
     if (navigator.vibrate) { navigator.vibrate(kind === 'big' ? [16, 50, 26] : kind === 'merge' ? 14 : 7); return; }
-    if (!hapLabel) {
-      hapLabel = document.createElement('label');
-      hapLabel.setAttribute('aria-hidden', 'true');
-      hapLabel.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none';
-      const i = document.createElement('input'); i.type = 'checkbox'; i.setAttribute('switch', ''); i.tabIndex = -1;
-      hapLabel.appendChild(i); document.body.appendChild(hapLabel);
-    }
-    hapLabel.click();
+    iosTap();
+    if (kind === 'big') setTimeout(() => { try { iosTap(); } catch (e) {} }, 90);
   } catch (e) {}
 }
 const API = '/api/scores';
@@ -561,6 +561,7 @@ class Component extends DCLogic {
       if (m) { e.preventDefault(); this.move(m); }
     };
     window.addEventListener('keydown', this.onKey);
+    document.addEventListener('touchend', this.flushHap, { passive: true });
     this.timer = setInterval(() => {
       const { game, screen } = this.state;
       if (screen !== 'game' || !game || game.mode !== 'blitz' || game.over || game.moves === 0) return;
@@ -569,7 +570,7 @@ class Component extends DCLogic {
       this.setState(ng.over ? this.record(ng) : { game: ng });
     }, 1000);
   }
-  componentWillUnmount() { if (this.rz) cancelAnimationFrame(this.rz); window.removeEventListener('resize', this.onResize); window.removeEventListener('keydown', this.onKey); clearInterval(this.timer); }
+  componentWillUnmount() { if (this.rz) cancelAnimationFrame(this.rz); window.removeEventListener('resize', this.onResize); window.removeEventListener('keydown', this.onKey); document.removeEventListener('touchend', this.flushHap); clearInterval(this.timer); }
   componentDidUpdate() {
     const { mode, size, theme, motion, showHint, stats, game, player, players, lb, haptics, bgPick, bgAsked } = this.state;
     try { localStorage.setItem(KEY, JSON.stringify({ mode, size, theme, motion, showHint, stats, player, players, lb, haptics, bgPick, bgAsked, game: game && { ...game, tiles: game.tiles.filter(t => !t.gone) } })); } catch (e) {}
@@ -660,7 +661,7 @@ class Component extends DCLogic {
     const top = Math.max(...live.map(t => t.v));
     const won = g.won || top >= target(n);
     const over = canMove(next, n) ? false : 'stuck';
-    if (this.state.haptics) { const k = over || gained >= 512 ? 'big' : gained ? 'merge' : 'move'; if (this.start && !(navigator.vibrate && navigator.userActivation && navigator.userActivation.hasBeenActive)) this.pendingHap = k; else haptic(k); }
+    if (this.state.haptics) { const k = over || gained >= 512 ? 'big' : gained ? 'merge' : 'move'; if (this.start && !(navigator.vibrate && navigator.userActivation && navigator.userActivation.hasBeenActive)) this.pendingHap = k; else if (!this.start || navigator.vibrate) haptic(k); else this.pendingHap = k; }
     const history = [...g.history, { tiles: g.tiles.filter(t => !t.gone), score: g.score, moves: g.moves }].slice(-10);
     const key = g.mode + '-' + n;
     const s = { ...(this.state.stats[key] || { best: 0, played: 0, tile: 0 }) };
@@ -746,8 +747,9 @@ class Component extends DCLogic {
   }
   swDown = e => { if (e.target.closest && e.target.closest('button')) return; this.start = { x: e.clientX, y: e.clientY, done: false }; };
   swMove = e => { const s = this.start; if (!s || s.done) return; const d = this.swipeDir(e, 14); if (d) { s.done = true; this.move(d); } };
-  swUp = e => { const s = this.start; if (s && !s.done) { const d = this.swipeDir(e, 10); if (d) this.move(d); } this.start = null; if (this.pendingHap) { haptic(this.pendingHap); this.pendingHap = null; } };
-  swCancel = () => { this.start = null; this.pendingHap = null; };
+  swUp = e => { const s = this.start; if (s && !s.done) { const d = this.swipeDir(e, 10); if (d) this.move(d); } this.start = null; if (e.pointerType !== 'touch') this.flushHap(); };
+  flushHap = () => { if (this.pendingHap) { const k = this.pendingHap; this.pendingHap = null; haptic(k); } };
+  swCancel = () => { this.start = null; };
 
   askBg(name) {
     const key = (name || '').trim().toLowerCase();
@@ -881,6 +883,8 @@ class Component extends DCLogic {
       toggles: [sw('Tile motion', 'Slide and merge animations', motion, 'motion'), sw('Swipe hint', 'Show the control hint under the board', showHint, 'showHint'), sw('Haptics', 'Vibrate on swipes and merges', this.state.haptics, 'haptics')],
       showReset, askReset: () => this.setState({ showReset: true }), cancelReset: () => this.setState({ showReset: false }),
       doReset: () => this.setState({ stats: {}, lb: [], showReset: false }),
+      testHaptics: () => haptic('big'),
+      hapNote: navigator.vibrate ? 'Tap Test. If nothing happens, check your phone isn\'t on silent or battery saver.' : 'iPhone: needs iOS 18+, and Settings → Sounds & Haptics → System Haptics turned on. Taps happen as your finger lifts.',
     };
   }
 }
