@@ -526,7 +526,7 @@ class Component extends DCLogic {
       statMode: 'classic',
       haptics: saved.haptics ?? true, hapLift: saved.hapLift ?? false, bgPick: saved.bgPick || {}, bgAsked: saved.bgAsked || {}, bgPrompt: false,
       player: saved.player || '',
-      players: saved.players || [],
+      players: (saved.players || []).filter((p, i, a) => a.findIndex(q => q.toLowerCase() === p.toLowerCase()) === i),
       lb: (saved.lb || []).filter(e => !String(e.id).startsWith('seed')),
       remote: {}, lbStatus: '', lastRank: null,
       lbMode: null, lbSize: null, showPlayers: !saved.player, newName: '',
@@ -556,6 +556,8 @@ class Component extends DCLogic {
     };
     window.addEventListener('keydown', this.onKey);
     this.syncTapHaptics();
+    this.retryPending();
+    this.onOnline = () => this.retryPending(); window.addEventListener('online', this.onOnline);
     document.addEventListener('touchend', this.flushHap, { passive: true });
     this.timer = setInterval(() => {
       const { game, screen } = this.state;
@@ -592,11 +594,23 @@ class Component extends DCLogic {
     return { game: { ...g, recorded: true, entryId: id }, lb: [...this.state.lb, entry].slice(-300) };
   }
 
-  submit(entry) {
-    fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(entry) })
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d && d.rank) this.setState({ lastRank: { id: entry.id, rank: d.rank, total: d.total } }); this.fetchBoard(entry.mode, entry.size); })
-      .catch(() => {});
+  submit(entry, quiet) {
+    const PQ = 'n2048.pending';
+    const pend = () => { try { return JSON.parse(localStorage.getItem(PQ)) || []; } catch (e) { return []; } };
+    const save = l => { try { localStorage.setItem(PQ, JSON.stringify(l.slice(-50))); } catch (e) {} };
+    return fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(entry) })
+      .then(r => { if (r.status >= 500 || r.status === 404) throw new Error(r.status); return r.ok ? r.json() : null; })
+      .then(d => {
+        save(pend().filter(e => e.id !== entry.id));
+        if (quiet) return;
+        if (d && d.rank) this.setState({ lastRank: { id: entry.id, rank: d.rank, total: d.total } });
+        this.fetchBoard(entry.mode, entry.size);
+      })
+      .catch(() => { const l = pend(); if (!l.some(e => e.id === entry.id)) save([...l, entry]); });
+  }
+  retryPending() {
+    let l = []; try { l = JSON.parse(localStorage.getItem('n2048.pending')) || []; } catch (e) {}
+    l.reduce((p, e) => p.then(() => this.submit(e, true)), Promise.resolve());
   }
 
   fetchBoard(mode, size) {
@@ -700,8 +714,10 @@ class Component extends DCLogic {
   addPlayer = () => {
     const n = this.state.newName.replace(/[^\p{L}\p{N} _.\-]/gu, '').trim().slice(0, 16);
     if (!n) return;
-    const players = this.state.players.includes(n) ? this.state.players : [...this.state.players, n];
-    this.setState({ players, player: n, newName: '', showPlayers: false }, () => this.askBg(n));
+    const found = this.state.players.find(p => p.toLowerCase() === n.toLowerCase());
+    const players = found ? this.state.players : [...this.state.players, n];
+    const pick = found || n;
+    this.setState({ players, player: pick, newName: '', showPlayers: false }, () => this.askBg(pick));
   };
 
   renderBoard() {
@@ -797,7 +813,7 @@ class Component extends DCLogic {
     const top = rows.slice(0, 20);
     const lastId = g && g.entryId;
     const rankIdx = lastId ? rows.findIndex(e => e.id === lastId) : -1;
-    const bestOf = n => { const b = lb.filter(e => e.name === n); return b.length ? 'Best ' + fmt(Math.max(...b.map(e => e.score))) : ''; };
+    const bestOf = n => { const b = lb.filter(e => e.name.toLowerCase() === n.toLowerCase()); return b.length ? 'Best ' + fmt(Math.max(...b.map(e => e.score))) : ''; };
     return {
       player, me: { bg: avBg(player), initial: ini(player) },
       openPlayers: () => this.setState({ showPlayers: true }), closePlayers: () => { if (this.state.player) this.setState({ showPlayers: false }); },
@@ -806,13 +822,13 @@ class Component extends DCLogic {
       showPlayers, newName, typeName: e => this.setState({ newName: e.target.value }), nameKey: e => { if (e.key === 'Enter') this.addPlayer(); },
       addDisabled: !newName.trim(), addLabel: player ? 'Add' : "Let's play", addPlayer: this.addPlayer,
       playersList: players.map(n => ({ name: n, bg: avBg(n), initial: ini(n), best: bestOf(n),
-        ring: n === player ? 'inset 0 0 0 1px var(--color-accent)' : 'none', pick: () => this.setState({ player: n, showPlayers: false }, () => this.askBg(n)) })),
+        ring: n.toLowerCase() === player.toLowerCase() ? 'inset 0 0 0 1px var(--color-accent)' : 'none', pick: () => this.setState({ player: n, showPlayers: false }, () => this.askBg(n)) })),
       lbModes: MODES.map(m => ({ ...m, checked: m.id === lm, pick: () => { this.setState({ lbMode: m.id }); this.fetchBoard(m.id, lsz); } })),
       lbSizes: SIZES.map(z => ({ label: z + '×' + z, checked: z === lsz, pick: () => { this.setState({ lbSize: z }); this.fetchBoard(lm, z); } })),
       lbRows: top.map((e, i) => ({ ...e, rank: i + 1, score: fmt(e.score), bg: avBg(e.name), initial: ini(e.name),
         meta: 'Top tile ' + e.tile + (e.id === lastId ? ' · just now' : ''),
         rankColor: i < 3 ? 'var(--color-accent-200)' : 'var(--color-neutral-200)',
-        ring: e.id === lastId ? 'inset 0 0 0 1px var(--color-accent-200), 0 0 18px color-mix(in srgb, var(--color-accent-300) 40%, transparent)' : e.name === player ? 'inset 0 0 0 1px var(--color-accent-700)' : 'none' })),
+        ring: e.id === lastId ? 'inset 0 0 0 1px var(--color-accent-200), 0 0 18px color-mix(in srgb, var(--color-accent-300) 40%, transparent)' : e.name.toLowerCase() === player.toLowerCase() ? 'inset 0 0 0 1px var(--color-accent-700)' : 'none' })),
       lbEmpty: top.length === 0,
       hasRank: rankIdx >= 0, rankLabel: lastRank && lastRank.id === lastId ? '#' + lastRank.rank + ' of ' + lastRank.total + ' on the ' + gs + '×' + gs + ' leaderboard' : rankIdx >= 0 ? '#' + (rankIdx + 1) + ' of ' + rows.length + ' on the ' + gs + '×' + gs + ' leaderboard' : '',
     };
