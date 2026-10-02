@@ -415,11 +415,23 @@ function iosTap() {
   const i = document.createElement('input'); i.type = 'checkbox'; i.setAttribute('switch', '');
   l.appendChild(i); document.head.appendChild(l); l.click(); document.head.removeChild(l);
 }
+const IS_IOS_TAP = !navigator.vibrate && /iP(hone|ad|od)|Macintosh/.test(navigator.userAgent) && 'ontouchend' in document;
+function addTapHaptic(btn) {
+  if (btn.__hap && btn.contains(btn.__hap)) return;
+  const l = document.createElement('label');
+  l.setAttribute('aria-hidden', 'true'); l.className = '__hap';
+  l.style.cssText = 'position:absolute;inset:0;z-index:5;border-radius:inherit;cursor:inherit;-webkit-tap-highlight-color:transparent;margin:0;padding:0';
+  const i = document.createElement('input');
+  i.type = 'checkbox'; i.setAttribute('switch', ''); i.tabIndex = -1;
+  i.style.cssText = 'visibility:hidden;position:absolute;width:1px;height:1px;margin:0;pointer-events:none';
+  i.addEventListener('click', e => e.stopPropagation());
+  l.appendChild(i);
+  if (getComputedStyle(btn).position === 'static') btn.style.position = 'relative';
+  btn.appendChild(l); btn.__hap = l;
+}
 function haptic(kind) {
   try {
     if (navigator.vibrate) { navigator.vibrate(kind === 'big' ? [16, 50, 26] : kind === 'merge' ? 14 : 7); return; }
-    iosTap();
-    if (kind === 'big') setTimeout(() => { try { iosTap(); } catch (e) {} }, 90);
   } catch (e) {}
 }
 const API = '/api/scores';
@@ -543,13 +555,7 @@ class Component extends DCLogic {
       if (m) { e.preventDefault(); this.move(m); }
     };
     window.addEventListener('keydown', this.onKey);
-    this.onTouchStart = e => {
-      const st = this.state;
-      if (!st.haptics || st.hapLift || navigator.vibrate || st.screen !== 'game') return;
-      if (e.target.closest && e.target.closest('button,input,label')) return;
-      haptic('move');
-    };
-    document.addEventListener('touchstart', this.onTouchStart, { passive: true });
+    this.syncTapHaptics();
     document.addEventListener('touchend', this.flushHap, { passive: true });
     this.timer = setInterval(() => {
       const { game, screen } = this.state;
@@ -559,8 +565,20 @@ class Component extends DCLogic {
       this.setState(ng.over ? this.record(ng) : { game: ng });
     }, 1000);
   }
-  componentWillUnmount() { if (this.rz) cancelAnimationFrame(this.rz); window.removeEventListener('resize', this.onResize); window.removeEventListener('keydown', this.onKey); document.removeEventListener('touchend', this.flushHap); document.removeEventListener('touchstart', this.onTouchStart); clearInterval(this.timer); }
-  componentDidUpdate() {
+  syncTapHaptics() {
+    if (!IS_IOS_TAP) return;
+    if (this.state.haptics) {
+      const run = () => document.querySelectorAll('button').forEach(addTapHaptic);
+      run();
+      if (!this.hapObs) { this.hapObs = new MutationObserver(() => { if (!this.hapQ) this.hapQ = requestAnimationFrame(() => { this.hapQ = null; run(); }); }); this.hapObs.observe(document.body, { childList: true, subtree: true }); }
+    } else {
+      if (this.hapObs) { this.hapObs.disconnect(); this.hapObs = null; }
+      document.querySelectorAll('label.__hap').forEach(l => { if (l.parentNode && l.parentNode.__hap === l) l.parentNode.__hap = null; l.remove(); });
+    }
+  }
+  componentWillUnmount() { if (this.rz) cancelAnimationFrame(this.rz); window.removeEventListener('resize', this.onResize); window.removeEventListener('keydown', this.onKey); document.removeEventListener('touchend', this.flushHap); if (this.hapObs) this.hapObs.disconnect(); clearInterval(this.timer); }
+  componentDidUpdate(pp, ps) {
+    if (ps && ps.haptics !== this.state.haptics) this.syncTapHaptics();
     const { mode, size, theme, motion, showHint, stats, game, player, players, lb, haptics, hapLift, bgPick, bgAsked } = this.state;
     try { localStorage.setItem(KEY, JSON.stringify({ mode, size, theme, motion, showHint, stats, player, players, lb, haptics, hapLift, bgPick, bgAsked, game: game && { ...game, tiles: game.tiles.filter(t => !t.gone) } })); } catch (e) {}
   }
@@ -869,11 +887,11 @@ class Component extends DCLogic {
       }),
       rings: { retro: ring(theme === 'retro'), blurple: ring(theme === 'blurple'), mono: ring(theme === 'mono'), outline: ring(theme === 'outline') },
       pickBlurple: () => this.setState({ theme: 'blurple' }), pickMono: () => this.setState({ theme: 'mono' }), pickOutline: () => this.setState({ theme: 'outline' }), pickRetro: () => this.setState({ theme: 'retro' }),
-      toggles: [sw('Tile motion', 'Slide and merge animations', motion, 'motion'), sw('Swipe hint', 'Show the control hint under the board', showHint, 'showHint'), sw('Haptics', 'Vibrate on swipes and merges', this.state.haptics, 'haptics'), ...(navigator.vibrate ? [] : [sw('Buzz when finger lifts', 'iPhone: try this if you feel nothing on swipes', hapLift, 'hapLift')])],
+      toggles: [sw('Tile motion', 'Slide and merge animations', motion, 'motion'), sw('Swipe hint', 'Show the control hint under the board', showHint, 'showHint'), sw('Haptics', 'Vibrate on swipes and merges', this.state.haptics, 'haptics')],
       showReset, askReset: () => this.setState({ showReset: true }), cancelReset: () => this.setState({ showReset: false }),
       doReset: () => this.setState({ stats: {}, lb: [], showReset: false }),
       testHaptics: () => haptic('big'),
-      hapNote: navigator.vibrate ? 'Tap Test. If nothing happens, check your phone isn\'t on silent or battery saver.' : 'iPhone: needs iOS 18+, and Settings → Sounds & Haptics → System Haptics turned on. Taps happen as your finger lifts.',
+      hapNote: navigator.vibrate ? 'Tap Test. If nothing happens, check your phone isn\'t on silent or battery saver.' : 'iPhone: buttons tick when you tap them. Apple no longer lets websites buzz on swipes, so the board stays silent. Needs System Haptics on in Settings → Sounds & Haptics.',
     };
   }
 }
