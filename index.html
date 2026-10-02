@@ -59,10 +59,10 @@ a{color:var(--color-accent)}a:hover{color:var(--color-accent-300)}
 </div>
 <div style="display:flex;flex-direction:column;gap:12px;padding:6px 0 4px">
 <div style="display:flex;gap:8px">
-<div style="width:68px;height:68px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:500;background:var(--color-neutral-300);color:var(--color-neutral-900)">2</div>
-<div style="width:68px;height:68px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:500;background:var(--color-accent-300);color:var(--color-accent-900)">0</div>
-<div style="width:68px;height:68px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:500;background:var(--color-accent-200);color:var(--color-accent-900);box-shadow:inset 0 0 0 2px var(--color-accent-100), 0 0 18px color-mix(in srgb, var(--color-accent) 45%, transparent)">4</div>
-<div style="width:68px;height:68px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:500;background:var(--color-accent-100);color:var(--color-accent-900);box-shadow:inset 0 0 0 2px var(--color-accent-100), 0 0 36px color-mix(in srgb, var(--color-accent-300) 85%, transparent)">8</div>
+<div style="width:68px;height:68px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:500;background:#e6e8f5;color:#1b1d33;box-shadow:none">2</div>
+<div style="width:68px;height:68px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:500;background:#7fb2ff;color:#0b1430;box-shadow:none">0</div>
+<div style="width:68px;height:68px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:500;background:#a6e45a;color:#1c2a06;box-shadow:none">4</div>
+<div style="width:68px;height:68px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:500;background:#ff6f8a;color:#2e0612;box-shadow:inset 0 0 0 2px #fff, 0 0 26px #ff6f8aaa">8</div>
 </div>
 <div style="font-size:18px;color:var(--color-neutral-200)">Slide. Merge. Keep going.</div>
 </div>
@@ -248,37 +248,19 @@ a{color:var(--color-accent)}a:hover{color:var(--color-accent-300)}
 <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
 <button onClick="{{ pickBlurple }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:var(--radius-md);background:var(--color-surface);box-shadow:{{ rings.blurple }}">
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
-<div style="aspect-ratio:1;border-radius:4px;background:var(--color-neutral-800);color:var(--color-neutral-200);display:flex;align-items:center;justify-content:center;font-size:12px">4</div>
-<div style="aspect-ratio:1;border-radius:4px;background:var(--color-accent-700);color:var(--color-accent-100);display:flex;align-items:center;justify-content:center;font-size:12px">64</div>
-<div style="aspect-ratio:1;border-radius:4px;background:var(--color-accent-700);color:var(--color-accent-100);box-shadow:inset 0 0 0 1px var(--color-accent-300), 0 0 10px color-mix(in srgb, var(--color-accent) 45%, transparent);display:flex;align-items:center;justify-content:center;font-size:11px">512</div>
-<div style="aspect-ratio:1;border-radius:4px;background:var(--color-section-glow);color:var(--color-accent-100);box-shadow:inset 0 0 0 1px var(--color-accent-100), 0 0 14px color-mix(in srgb, var(--color-accent-400) 65%, transparent);display:flex;align-items:center;justify-content:center;font-size:9px">2048</div>
+<div style="aspect-ratio:1;border-radius:4px;background:#ffd9b8;color:#1b1d33;box-shadow:none;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600">4</div>
+<div style="aspect-ratio:1;border-radius:4px;background:#a6e45a;color:#1c2a06;box-shadow:none;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600">64</div>
+<div style="aspect-ratio:1;border-radius:4px;background:#ff6f8a;color:#2e0612;box-shadow:inset 0 0 0 1.5px #fff, 0 0 10px #ff6f8aaa;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">512</div>
+<div style="aspect-ratio:1;border-radius:4px;background:#b8a8ff;color:#1a1040;box-shadow:inset 0 0 0 1.5px #fff, 0 0 14px #b8a8ffaa;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600">2048</div>
 </div>
 <div style="font-size:16px">Nocturne</div>
 </button>
-<button onClick="{{ pickMono }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:var(--radius-md);background:var(--color-surface);box-shadow:{{ rings.mono }}">
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
-<div style="aspect-ratio:1;border-radius:4px;background:var(--color-neutral-900);color:var(--color-neutral-200);display:flex;align-items:center;justify-content:center;font-size:12px">4</div>
-<div style="aspect-ratio:1;border-radius:4px;background:var(--color-neutral-700);color:var(--color-neutral-100);display:flex;align-items:center;justify-content:center;font-size:12px">64</div>
-<div style="aspect-ratio:1;border-radius:4px;background:var(--color-neutral-800);color:var(--color-accent-200);box-shadow:inset 0 0 0 1px var(--color-accent), 0 0 10px color-mix(in srgb, var(--color-accent) 45%, transparent);display:flex;align-items:center;justify-content:center;font-size:11px">512</div>
-<div style="aspect-ratio:1;border-radius:4px;background:var(--color-neutral-600);color:var(--color-accent-100);box-shadow:inset 0 0 0 1px var(--color-accent-200), 0 0 14px color-mix(in srgb, var(--color-accent-400) 65%, transparent);display:flex;align-items:center;justify-content:center;font-size:9px">2048</div>
-</div>
-<div style="font-size:16px">Graphite</div>
-</button>
-<button onClick="{{ pickOutline }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:var(--radius-md);background:var(--color-surface);box-shadow:{{ rings.outline }}">
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
-<div style="aspect-ratio:1;border-radius:4px;box-shadow:inset 0 0 0 1px var(--color-neutral-700);color:var(--color-neutral-200);display:flex;align-items:center;justify-content:center;font-size:12px">4</div>
-<div style="aspect-ratio:1;border-radius:4px;box-shadow:inset 0 0 0 1px var(--color-accent-600);color:var(--color-accent-200);display:flex;align-items:center;justify-content:center;font-size:12px">64</div>
-<div style="aspect-ratio:1;border-radius:4px;box-shadow:inset 0 0 0 1px var(--color-accent-400), 0 0 10px color-mix(in srgb, var(--color-accent) 45%, transparent);color:var(--color-accent-100);display:flex;align-items:center;justify-content:center;font-size:11px">512</div>
-<div style="aspect-ratio:1;border-radius:4px;box-shadow:inset 0 0 0 1px var(--color-accent-100), 0 0 14px color-mix(in srgb, var(--color-accent-400) 65%, transparent);color:var(--color-accent-100);display:flex;align-items:center;justify-content:center;font-size:9px">2048</div>
-</div>
-<div style="font-size:16px">Wire</div>
-</button>
 <button onClick="{{ pickRetro }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:var(--radius-md);background:var(--color-surface);box-shadow:{{ rings.retro }}">
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:3px;background:#080913;box-shadow:0 0 0 2px #4a50b8">
-<div style="aspect-ratio:1;background:#3b3f8f;color:#eef0ff;box-shadow:inset 0 -3px 0 rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:8px">4</div>
-<div style="aspect-ratio:1;background:#9bd13c;color:#0b0c18;box-shadow:inset 0 -3px 0 rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:7px">64</div>
-<div style="aspect-ratio:1;background:#ec5a5a;color:#0b0c18;box-shadow:inset 0 -3px 0 rgba(0,0,0,.28), 0 0 8px #ec5a5a99;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:6px">512</div>
-<div style="aspect-ratio:1;background:#b46bff;color:#0b0c18;box-shadow:inset 0 -3px 0 rgba(0,0,0,.28), 0 0 10px #b46bff99;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:5px">2048</div>
+<div style="aspect-ratio:1;background:#ffcfa3;color:#0b0c18;box-shadow:inset 0 -3px 0 rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:8px">4</div>
+<div style="aspect-ratio:1;background:#a8e03c;color:#0b0c18;box-shadow:inset 0 -3px 0 rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:7px">64</div>
+<div style="aspect-ratio:1;background:#ff5050;color:#0b0c18;box-shadow:inset 0 -3px 0 rgba(0,0,0,.28), 0 0 8px #ff505099;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:6px">512</div>
+<div style="aspect-ratio:1;background:#a070ff;color:#0b0c18;box-shadow:inset 0 -3px 0 rgba(0,0,0,.28), 0 0 10px #a070ff99;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:5px">2048</div>
 </div>
 <div style="font-size:16px">Retro</div>
 </button>
@@ -449,23 +431,23 @@ const tok = s => s[0] === '#' ? s : s === 'sg' ? 'var(--color-section-glow)' : s
   : `var(--color-${s[0] === 'n' ? 'neutral' : 'accent'}-${s.slice(1)})`;
 const LOOKS = {
   retro: {
-    bg: ['#2a2f5a', '#3b3f8f', '#2f7fd8', '#20b2c8', '#22c48a', '#9bd13c', '#f2c230', '#f2913a', '#ec5a5a', '#e04fb0', '#b46bff', '#f3f0ff'],
-    fg: ['#dfe2ff', '#eef0ff', '#0b0c18', '#0b0c18', '#0b0c18', '#0b0c18', '#0b0c18', '#0b0c18', '#0b0c18', '#0b0c18', '#0b0c18', '#2a1d6b'],
+    bg: ['#f0f0f0', '#ffcfa3', '#5aa0ff', '#20c8d8', '#28d07a', '#a8e03c', '#ffd23c', '#ff9a3c', '#ff5050', '#ff4fc0', '#a070ff', '#ffffff'],
+    fg: ['#0b0c18', '#0b0c18', '#0b0c18', '#0b0c18', '#0b0c18', '#0b0c18', '#0b0c18', '#0b0c18', '#0b0c18', '#0b0c18', '#0b0c18', '#2a1d6b'],
   },
   blurple: {
-    bg: ['n300', 'n200', 'a300', 'a200', 'a400', 'a500', 'a100', 'a200', 'a300', 'a200', 'a100', 'a100'],
-    fg: ['n900', 'n900', 'a900', 'a900', 'a900', 'a900', 'a800', 'a800', 'a900', 'a900', 'a900', 'a900'],
-    bd: ['-', '-', '-', '-', '-', '-', 'a400', 'a400', 'a100', 'a100', 'a100', 'a100'],
+    bg: ['#e6e8f5', '#ffd9b8', '#7fb2ff', '#4fd6e6', '#5ee0a8', '#a6e45a', '#ffd75e', '#ffa35c', '#ff6f8a', '#d47bff', '#b8a8ff', '#ffffff'],
+    fg: ['#1b1d33', '#1b1d33', '#0b1430', '#06242a', '#062a1b', '#1c2a06', '#2e2300', '#2e1400', '#2e0612', '#22063a', '#1a1040', '#1a1040'],
+    bd: ['-', '-', '-', '-', '-', '-', '-', '-', '#ffffff', '#ffffff', '#ffffff', '#ffffff'],
   },
   mono: {
-    bg: ['n600', 'n500', 'n400', 'n300', 'n200', 'n100', 'n200', 'n100', 'n200', 'n100', 'a100', 'a100'],
-    fg: ['n100', 'n900', 'n900', 'n900', 'n900', 'n900', 'a800', 'a800', 'a900', 'a900', 'a900', 'a900'],
+    bg: ['#3a3d4f', '#55596e', '#71768d', '#8f94aa', '#adb2c6', '#cdd1e0', '#ffd75e', '#ffa35c', '#ff6f8a', '#d47bff', '#b8a8ff', '#ffffff'],
+    fg: ['#eef0f8', '#ffffff', '#0f1120', '#0f1120', '#0f1120', '#0f1120', '#2e2300', '#2e1400', '#2e0612', '#22063a', '#1a1040', '#1a1040'],
     bd: ['-', '-', '-', '-', '-', '-', '-', '-', 'a500', 'a300', 'a200', 'a100'],
   },
   outline: {
-    bg: null, bgc: 'color-mix(in srgb, var(--color-text) 6%, transparent)',
-    fg: ['n100', 'n100', 'a100', 'a100', 'a100', 'a100', 'a100', 'a100', 'a100', 'a100', 'a100', 'a100'],
-    bd: ['n300', 'n200', 'a400', 'a300', 'a300', 'a200', 'a200', 'a100', 'a100', 'a100', 'a100', 'a100'],
+    bg: null, bgc: 'rgba(255,255,255,.06)',
+    fg: ['#e6e8f5', '#ffd9b8', '#7fb2ff', '#4fd6e6', '#5ee0a8', '#a6e45a', '#ffd75e', '#ffa35c', '#ff6f8a', '#d47bff', '#b8a8ff', '#ffffff'],
+    bd: ['#e6e8f5', '#ffd9b8', '#7fb2ff', '#4fd6e6', '#5ee0a8', '#a6e45a', '#ffd75e', '#ffa35c', '#ff6f8a', '#d47bff', '#b8a8ff', '#ffffff'],
   },
 };
 function look(v, theme) {
@@ -480,7 +462,7 @@ function look(v, theme) {
     : v >= 512 ? '0 0 18px color-mix(in srgb, var(--color-accent-300) 55%, transparent)' : null;
   const sh = [];
   if (L.bd[i] !== '-') sh.push(`inset 0 0 0 ${L.bg ? 2 : 1.5}px ${tok(L.bd[i])}`);
-  if (glow) sh.push(glow);
+  if (v >= 512) { const c = (L.bg || L.bd)[i]; sh.push(`0 0 ${v >= 2048 ? 34 : v >= 1024 ? 24 : 16}px ${c[0] === '#' ? c + 'aa' : tok(c)}`); }
   return {
     background: L.bg ? tok(L.bg[i]) : L.bgc,
     color: tok(L.fg[i]),
@@ -524,7 +506,7 @@ class Component extends DCLogic {
       screen: props.startScreen || 'home',
       mode: saved.mode || 'classic',
       size: saved.size || 4,
-      theme: saved.theme || 'blurple',
+      theme: saved.theme === 'retro' ? 'retro' : 'blurple',
       motion: saved.motion ?? true,
       showHint: saved.showHint ?? true,
       stats: saved.stats || {},
