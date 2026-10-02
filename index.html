@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>2048 4 Homies</title>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0b0c18">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<script>
+(function(){function show(m){var d=document.getElementById('__err');if(!d){d=document.createElement('pre');d.id='__err';d.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;z-index:99999;margin:0;padding:10px;background:#2a0f16;color:#ffd6dc;font:12px/1.4 monospace;white-space:pre-wrap;border-radius:8px;max-height:40vh;overflow:auto';(document.body||document.documentElement).appendChild(d);}d.textContent+=m+'\n';}
+window.addEventListener('error',function(e){show('Error: '+(e.message||'')+(e.filename?' @ '+e.filename.split('/').pop()+':'+e.lineno:'')+(e.target&&e.target.src?' load failed: '+e.target.src:'')+(e.target&&e.target.href?' load failed: '+e.target.href:''));},true);
+window.addEventListener('unhandledrejection',function(e){show('Promise: '+(e.reason&&e.reason.message||e.reason));});
+document.addEventListener('securitypolicyviolation',function(e){show('Blocked by CSP: '+e.violatedDirective+' '+e.blockedURI);});
+if(location.protocol==='file:')show('This file must be opened from your Netlify link, not from your computer.');
+})();
+</script>
+<script src="./react.production.min.js"></script>
+<script src="./react-dom.production.min.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="ds-styles.css">
+<script src="ds-bundle.js"></script>
+<link rel="stylesheet" href="phosphor.css">
+<link rel="stylesheet" href="fonts.css">
+<style>
+body{margin:0;background:#0b0c18;min-height:100vh;overscroll-behavior:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
+a{color:var(--color-accent)}a:hover{color:var(--color-accent-300)}
+@keyframes tpop{0%{transform:scale(.2);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes tmergeA{0%{transform:scale(1)}45%{transform:scale(1.14)}100%{transform:scale(1)}}
+@keyframes tmergeB{0%{transform:scale(1)}45%{transform:scale(1.14)}100%{transform:scale(1)}}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes scoreup{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-22px)}}
+.seg-opt:has(input:checked){box-shadow:inset 0 0 0 2px var(--color-accent-200),0 0 18px color-mix(in srgb,var(--color-accent-300) 65%,transparent)!important;color:var(--color-accent-100)!important;font-weight:600}
+</style>
+</helmet>
+<div style="--color-bg:#0f1120;--color-surface:#1d2136;--color-divider:#6a70a0;--color-text:#f3f4fb;--font-body:{{ fontStack }};--font-heading:{{ fontStack }};position:fixed;inset:0;height:100dvh;background:radial-gradient(120% 55% at 50% 0%, #2b3166 0%, #141731 45%, #0b0c18 100%);color:var(--color-text);font-family:{{ fontStack }};display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top) + 6px) 20px calc(env(safe-area-inset-bottom) + 14px);box-sizing:border-box;overflow:hidden;user-select:none;-webkit-user-select:none">
+<sc-if value="{{ hasBg }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;z-index:-1;pointer-events:none;background:{{ bgCss }}"></div>
+<div style="position:absolute;inset:0;z-index:-1;pointer-events:none;background:{{ bgDim }}"></div>
+</sc-if>
+
+<sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:18px;animation:fadein 200ms ease">
+<div style="display:flex;align-items:center;gap:6px;padding-top:6px">
+<button class="btn btn-secondary" style="min-height:44px;padding:0 12px 0 6px;margin-right:auto;gap:8px;flex:none" onClick="{{ openPlayers }}">
+<span style="flex:none;width:32px;height:32px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;background:{{ me.bg }};color:var(--color-neutral-900)">{{ me.initial }}</span>
+<span style="flex:none;max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ player }}</span>
+<i class="ph ph-caret-down" style="font-size:17px;color:var(--color-neutral-200)"></i>
+</button>
+<button class="btn btn-secondary btn-icon" style="width:44px;height:44px" onClick="{{ goBoard }}" aria-label="Leaderboard"><i class="ph ph-trophy" style="font-size:20px"></i></button>
+<button class="btn btn-secondary btn-icon" style="width:44px;height:44px" onClick="{{ goStats }}" aria-label="Stats"><i class="ph ph-chart-bar" style="font-size:20px"></i></button>
+<button class="btn btn-secondary btn-icon" style="width:44px;height:44px" onClick="{{ goSettings }}" aria-label="Settings"><i class="ph ph-gear-six" style="font-size:20px"></i></button>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;padding:6px 0 4px">
+<div style="display:flex;gap:8px">
+<div style="width:68px;height:68px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:500;background:var(--color-neutral-300);color:var(--color-neutral-900)">2</div>
+<div style="width:68px;height:68px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:500;background:var(--color-accent-300);color:var(--color-accent-900)">0</div>
+<div style="width:68px;height:68px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:500;background:var(--color-accent-200);color:var(--color-accent-900);box-shadow:inset 0 0 0 2px var(--color-accent-100), 0 0 18px color-mix(in srgb, var(--color-accent) 45%, transparent)">4</div>
+<div style="width:68px;height:68px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:500;background:var(--color-accent-100);color:var(--color-accent-900);box-shadow:inset 0 0 0 2px var(--color-accent-100), 0 0 36px color-mix(in srgb, var(--color-accent-300) 85%, transparent)">8</div>
+</div>
+<div style="font-size:18px;color:var(--color-neutral-200)">Slide. Merge. Keep going.</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="font-size:15px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;color:var(--color-neutral-100)">Mode</div>
+<sc-for list="{{ modes }}" as="m" hint-placeholder-count="3">
+<button onClick="{{ m.pick }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:14px;padding:12px 14px;min-height:44px;border-radius:var(--radius-md);background:var(--color-surface);box-shadow:{{ m.ring }}">
+<i class="ph {{ m.icon }}" style="font-size:24px;color:{{ m.iconColor }}"></i>
+<div style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0">
+<div style="font-size:19px;font-weight:500">{{ m.name }}</div>
+<div style="font-size:15px;line-height:1.35;color:var(--color-neutral-200);text-wrap:pretty">{{ m.desc }}</div>
+</div>
+<div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px">
+<div style="font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-neutral-200)">Best</div>
+<div style="font-size:17px;font-variant-numeric:tabular-nums;color:var(--color-neutral-200)">{{ m.best }}</div>
+</div>
+</button>
+</sc-for>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="font-size:15px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;color:var(--color-neutral-100)">Board</div>
+<div class="seg" style="display:flex">
+<sc-for list="{{ sizes }}" as="s" hint-placeholder-count="4">
+<label class="seg-opt" style="flex:1;justify-content:center;min-height:52px;box-sizing:border-box;font-size:21px;font-weight:600;font-variant-numeric:tabular-nums"><input type="radio" name="size" checked="{{ s.checked }}" onChange="{{ s.pick }}">{{ s.label }}</label>
+</sc-for>
+</div>
+</div>
+
+<div style="margin-top:auto;display:flex;flex-direction:column;gap:8px">
+<sc-if value="{{ hasSaved }}" hint-placeholder-val="{{ false }}">
+<button class="btn btn-secondary" style="min-height: 48px; justify-content: space-between; padding: 0 16px; font-size: 16px" onClick="{{ resume }}">
+<span style="display:flex;align-items:center;gap:8px"><i class="ph ph-play-circle" style="font-size:18px"></i>Continue</span>
+<span style="font-size:16px;color:var(--color-neutral-200);font-variant-numeric:tabular-nums">{{ savedLabel }}</span>
+</button>
+</sc-if>
+<button class="btn btn-primary" style="min-height:52px;font-size:19px" onClick="{{ play }}">{{ playLabel }}</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isGame }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:16px;animation:fadein 200ms ease;touch-action:none" onPointerDown="{{ swDown }}" onPointerMove="{{ swMove }}" onPointerUp="{{ swUp }}" onPointerCancel="{{ swCancel }}">
+<div style="display:flex;align-items:center;justify-content:space-between;padding-top:6px">
+<button class="btn btn-secondary btn-icon" style="width:44px;height:44px" onClick="{{ goHome }}" aria-label="Home"><i class="ph ph-caret-left" style="font-size:20px"></i></button>
+<span class="tag tag-accent" style="font-size:18px;font-weight:600;padding:8px 14px;white-space:nowrap;box-shadow:inset 0 0 0 1px var(--color-accent-300)">{{ tagLabel }}</span>
+<button class="btn btn-secondary btn-icon" style="width:44px;height:44px" onClick="{{ restart }}" aria-label="New game"><i class="ph ph-arrow-clockwise" style="font-size:20px"></i></button>
+</div>
+
+<div style="display:flex;gap:8px">
+<div class="card" style="flex:1;position:relative;gap:0;padding:10px 14px">
+<div style="font-size:13px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;color:var(--color-neutral-100)">Score</div>
+<div style="font-size:26px;font-weight:500;letter-spacing:-0.02em;font-variant-numeric:tabular-nums">{{ score }}</div>
+<div style="position:absolute;right:14px;top:30px;font-size:18px;color:var(--color-accent-300)">{{ scorePop }}</div>
+</div>
+<div class="card" style="flex:1;gap:0;padding:10px 14px">
+<div style="font-size:13px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;color:var(--color-neutral-100)">Best</div>
+<div style="font-size:26px;font-weight:500;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;color:var(--color-neutral-200)">{{ best }}</div>
+</div>
+<sc-if value="{{ isBlitz }}" hint-placeholder-val="{{ false }}">
+<div class="card" style="flex:1;gap:0;padding:10px 14px;position:relative;overflow:hidden">
+<div style="font-size:13px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;color:var(--color-neutral-100)">Time</div>
+<div style="font-size:26px;font-weight:500;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;color:{{ timeColor }}">{{ timeLabel }}</div>
+<div style="position:absolute;left:0;bottom:0;height:2px;width:{{ timePct }};background:var(--color-accent);transition:width 1s linear"></div>
+</div>
+</sc-if>
+</div>
+
+<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:15px;color:var(--color-neutral-200)">
+<span style="min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ goalLabel }}</span>
+<span style="flex:none;white-space:nowrap;font-variant-numeric:tabular-nums">{{ movesLabel }}</span>
+</div>
+
+<div style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center">{{ board }}</div>
+
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:auto">
+<span style="font-size:15px;color:var(--color-neutral-200)">{{ hint }}</span>
+<sc-if value="{{ showUndo }}" hint-placeholder-val="{{ true }}">
+<button class="btn btn-secondary" style="min-height:44px;padding:0 16px" disabled="{{ undoDisabled }}" onClick="{{ undo }}"><i class="ph ph-arrow-u-up-left" style="font-size:18px"></i>Undo<span style="color:var(--color-neutral-200);font-variant-numeric:tabular-nums">{{ undosLeft }}</span></button>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isBoard }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:14px;animation:fadein 200ms ease">
+<div style="display:flex;align-items:center;gap:10px;padding-top:6px">
+<button class="btn btn-secondary btn-icon" style="width:44px;height:44px" onClick="{{ goHome }}" aria-label="Back"><i class="ph ph-caret-left" style="font-size:20px"></i></button>
+<h3 style="margin:0">Leaderboard</h3>
+</div>
+<div class="seg" style="display:flex">
+<sc-for list="{{ lbModes }}" as="lm" hint-placeholder-count="3">
+<label class="seg-opt" style="flex:1;justify-content:center;min-height:44px;box-sizing:border-box;font-size:17px"><input type="radio" name="lbmode" checked="{{ lm.checked }}" onChange="{{ lm.pick }}"><i class="ph {{ lm.icon }}" style="font-size:19px"></i>{{ lm.name }}</label>
+</sc-for>
+</div>
+<div class="seg" style="display:flex">
+<sc-for list="{{ lbSizes }}" as="ls" hint-placeholder-count="4">
+<label class="seg-opt" style="flex:1;justify-content:center;min-height:40px;box-sizing:border-box;font-size:17px;font-variant-numeric:tabular-nums"><input type="radio" name="lbsize" checked="{{ ls.checked }}" onChange="{{ ls.pick }}">{{ ls.label }}</label>
+</sc-for>
+</div>
+<div style="flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin:0 -4px;padding:2px 4px">
+<sc-for list="{{ lbRows }}" as="e" hint-placeholder-count="6">
+<div style="display:flex;align-items:center;gap:12px;min-height:56px;padding:0 12px;border-radius:var(--radius-md);background:var(--color-surface);box-shadow:{{ e.ring }}">
+<div style="width:22px;text-align:center;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;color:{{ e.rankColor }}">{{ e.rank }}</div>
+<span style="flex:none;width:34px;height:34px;border-radius:17px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;background:{{ e.bg }};color:var(--color-neutral-900)">{{ e.initial }}</span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+<div style="font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ e.name }}</div>
+<div style="font-size:15px;color:var(--color-neutral-200)">{{ e.meta }}</div>
+</div>
+<div style="font-size:17px;font-weight:600;font-variant-numeric:tabular-nums">{{ e.score }}</div>
+</div>
+</sc-for>
+<sc-if value="{{ lbEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="padding:28px 8px;text-align:center;font-size:17px;color:var(--color-neutral-200)">No scores on this board yet.</div>
+</sc-if>
+</div>
+<div style="font-size:15px;color:var(--color-neutral-200);text-wrap:pretty">{{ lbNote }}</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isStats }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;gap:18px;animation:fadein 200ms ease">
+<div style="display:flex;align-items:center;gap:10px;padding-top:6px">
+<button class="btn btn-secondary btn-icon" style="width:44px;height:44px" onClick="{{ goHome }}" aria-label="Back"><i class="ph ph-caret-left" style="font-size:20px"></i></button>
+<h3 style="margin:0">Stats</h3>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+<div class="card" style="gap:2px;padding:12px">
+<div style="font-size:13px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;color:var(--color-neutral-100)">Games</div>
+<div style="font-size:24px;font-weight:500;font-variant-numeric:tabular-nums">{{ totals.played }}</div>
+</div>
+<div class="card" style="gap:2px;padding:12px">
+<div style="font-size:13px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;color:var(--color-neutral-100)">Top tile</div>
+<div style="font-size:24px;font-weight:500;font-variant-numeric:tabular-nums;color:var(--color-accent-300)">{{ totals.tile }}</div>
+</div>
+<div class="card" style="gap:2px;padding:12px">
+<div style="font-size:13px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;color:var(--color-neutral-100)">Top score</div>
+<div style="font-size:24px;font-weight:500;font-variant-numeric:tabular-nums">{{ totals.best }}</div>
+</div>
+</div>
+<div class="seg" style="display:flex">
+<sc-for list="{{ statModes }}" as="sm" hint-placeholder-count="3">
+<label class="seg-opt" style="flex:1;justify-content:center;min-height:44px;box-sizing:border-box;font-size:17px"><input type="radio" name="statmode" checked="{{ sm.checked }}" onChange="{{ sm.pick }}"><i class="ph {{ sm.icon }}" style="font-size:19px"></i>{{ sm.name }}</label>
+</sc-for>
+</div>
+<table class="table" style="font-variant-numeric:tabular-nums">
+<thead><tr><th>Board</th><th>Best</th><th>Top tile</th><th style="text-align:right">Played</th></tr></thead>
+<tbody>
+<sc-for list="{{ statRows }}" as="r" hint-placeholder-count="4">
+<tr><td style="padding:12px 6px">{{ r.size }}</td><td style="padding:12px 6px">{{ r.best }}</td><td style="padding:12px 6px;color:var(--color-accent-300)">{{ r.tile }}</td><td style="padding:12px 6px;text-align:right;color:var(--color-neutral-200)">{{ r.played }}</td></tr>
+</sc-for>
+</tbody>
+</table>
+<div style="font-size:15px;color:var(--color-neutral-200);text-wrap:pretty">Bests are tracked per mode and board size. A dash means you haven't played that board yet.</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:20px;animation:fadein 200ms ease">
+<div style="display:flex;align-items:center;gap:10px;padding-top:6px">
+<button class="btn btn-secondary btn-icon" style="width:44px;height:44px" onClick="{{ goHome }}" aria-label="Back"><i class="ph ph-caret-left" style="font-size:20px"></i></button>
+<h3 style="margin:0">Settings</h3>
+</div>
+<sc-if value="{{ hasBgOptions }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
+<div style="font-size:15px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;color:var(--color-neutral-100)">Background</div>
+<span class="tag tag-accent" style="font-size:15px">{{ bgUnlockNote }}</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+<sc-for list="{{ bgOptions }}" as="o" hint-placeholder-count="3">
+<button onClick="{{ o.pick }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:8px">
+<div style="aspect-ratio:3/4;border-radius:var(--radius-md);background:{{ o.thumb }};box-shadow:{{ o.ring }}"></div>
+<div style="font-size:15px;text-align:center">{{ o.label }}</div>
+</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="font-size:15px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;color:var(--color-neutral-100)">Tile theme</div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+<button onClick="{{ pickBlurple }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:var(--radius-md);background:var(--color-surface);box-shadow:{{ rings.blurple }}">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+<div style="aspect-ratio:1;border-radius:4px;background:var(--color-neutral-800);color:var(--color-neutral-200);display:flex;align-items:center;justify-content:center;font-size:12px">4</div>
+<div style="aspect-ratio:1;border-radius:4px;background:var(--color-accent-700);color:var(--color-accent-100);display:flex;align-items:center;justify-content:center;font-size:12px">64</div>
+<div style="aspect-ratio:1;border-radius:4px;background:var(--color-accent-700);color:var(--color-accent-100);box-shadow:inset 0 0 0 1px var(--color-accent-300), 0 0 10px color-mix(in srgb, var(--color-accent) 45%, transparent);display:flex;align-items:center;justify-content:center;font-size:11px">512</div>
+<div style="aspect-ratio:1;border-radius:4px;background:var(--color-section-glow);color:var(--color-accent-100);box-shadow:inset 0 0 0 1px var(--color-accent-100), 0 0 14px color-mix(in srgb, var(--color-accent-400) 65%, transparent);display:flex;align-items:center;justify-content:center;font-size:9px">2048</div>
+</div>
+<div style="font-size:16px">Nocturne</div>
+</button>
+<button onClick="{{ pickMono }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:var(--radius-md);background:var(--color-surface);box-shadow:{{ rings.mono }}">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+<div style="aspect-ratio:1;border-radius:4px;background:var(--color-neutral-900);color:var(--color-neutral-200);display:flex;align-items:center;justify-content:center;font-size:12px">4</div>
+<div style="aspect-ratio:1;border-radius:4px;background:var(--color-neutral-700);color:var(--color-neutral-100);display:flex;align-items:center;justify-content:center;font-size:12px">64</div>
+<div style="aspect-ratio:1;border-radius:4px;background:var(--color-neutral-800);color:var(--color-accent-200);box-shadow:inset 0 0 0 1px var(--color-accent), 0 0 10px color-mix(in srgb, var(--color-accent) 45%, transparent);display:flex;align-items:center;justify-content:center;font-size:11px">512</div>
+<div style="aspect-ratio:1;border-radius:4px;background:var(--color-neutral-600);color:var(--color-accent-100);box-shadow:inset 0 0 0 1px var(--color-accent-200), 0 0 14px color-mix(in srgb, var(--color-accent-400) 65%, transparent);display:flex;align-items:center;justify-content:center;font-size:9px">2048</div>
+</div>
+<div style="font-size:16px">Graphite</div>
+</button>
+<button onClick="{{ pickOutline }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:var(--radius-md);background:var(--color-surface);box-shadow:{{ rings.outline }}">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+<div style="aspect-ratio:1;border-radius:4px;box-shadow:inset 0 0 0 1px var(--color-neutral-700);color:var(--color-neutral-200);display:flex;align-items:center;justify-content:center;font-size:12px">4</div>
+<div style="aspect-ratio:1;border-radius:4px;box-shadow:inset 0 0 0 1px var(--color-accent-600);color:var(--color-accent-200);display:flex;align-items:center;justify-content:center;font-size:12px">64</div>
+<div style="aspect-ratio:1;border-radius:4px;box-shadow:inset 0 0 0 1px var(--color-accent-400), 0 0 10px color-mix(in srgb, var(--color-accent) 45%, transparent);color:var(--color-accent-100);display:flex;align-items:center;justify-content:center;font-size:11px">512</div>
+<div style="aspect-ratio:1;border-radius:4px;box-shadow:inset 0 0 0 1px var(--color-accent-100), 0 0 14px color-mix(in srgb, var(--color-accent-400) 65%, transparent);color:var(--color-accent-100);display:flex;align-items:center;justify-content:center;font-size:9px">2048</div>
+</div>
+<div style="font-size:16px">Wire</div>
+</button>
+<button onClick="{{ pickRetro }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:var(--radius-md);background:var(--color-surface);box-shadow:{{ rings.retro }}">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:3px;background:#080913;box-shadow:0 0 0 2px #4a50b8">
+<div style="aspect-ratio:1;background:#3b3f8f;color:#eef0ff;box-shadow:inset 0 -3px 0 rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:8px">4</div>
+<div style="aspect-ratio:1;background:#9bd13c;color:#0b0c18;box-shadow:inset 0 -3px 0 rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:7px">64</div>
+<div style="aspect-ratio:1;background:#ec5a5a;color:#0b0c18;box-shadow:inset 0 -3px 0 rgba(0,0,0,.28), 0 0 8px #ec5a5a99;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:6px">512</div>
+<div style="aspect-ratio:1;background:#b46bff;color:#0b0c18;box-shadow:inset 0 -3px 0 rgba(0,0,0,.28), 0 0 10px #b46bff99;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:5px">2048</div>
+</div>
+<div style="font-size:16px">Retro</div>
+</button>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:2px">
+<div style="font-size:15px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;color:var(--color-neutral-100);margin-bottom:6px">Play</div>
+<sc-for list="{{ toggles }}" as="tg" hint-placeholder-count="2">
+<button onClick="{{ tg.flip }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:12px;min-height:52px;padding:0 2px">
+<div style="flex:1;display:flex;flex-direction:column;gap:1px">
+<div style="font-size:18px">{{ tg.label }}</div>
+<div style="font-size:15px;color:var(--color-neutral-200)">{{ tg.desc }}</div>
+</div>
+<div style="width:44px;height:26px;border-radius:13px;position:relative;box-shadow:{{ tg.track }};transition:box-shadow 150ms">
+<div style="position:absolute;top:4px;left:{{ tg.knobX }};width:18px;height:18px;border-radius:9px;background:{{ tg.knob }};transition:left 150ms ease, background 150ms"></div>
+</div>
+</button>
+</sc-for>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px;margin-top:auto">
+<button class="btn btn-secondary" style="min-height:48px" onClick="{{ askReset }}"><i class="ph ph-trash" style="font-size:18px"></i>Reset stats</button>
+<div style="font-size:15px;color:var(--color-neutral-200);text-align:center">2048 · Nocturne edition</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isRetro }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;z-index:25;pointer-events:none;background:repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0 1px, transparent 1px 3px)"></div></sc-if>
+<sc-if value="{{ showWin }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:20px;background:color-mix(in srgb, #04050a 90%, transparent);backdrop-filter:blur(8px);animation:fadein 220ms ease">
+<div class="dialog" style="width:100%;gap:14px;padding:22px;animation:rise 260ms ease">
+<div style="width:64px;height:64px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:500;background:var(--color-section-glow);color:var(--color-accent-100);box-shadow:inset 0 0 0 1px var(--color-accent-100), 0 0 32px color-mix(in srgb, var(--color-accent-400) 65%, transparent)">{{ targetLabel }}</div>
+<div class="dialog-title" style="font-size:24px">{{ winTitle }}</div>
+<div class="dialog-body">{{ winBody }}</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<button class="btn btn-primary" style="min-height:48px" onClick="{{ keepGoing }}">Keep going</button>
+<button class="btn btn-secondary" style="min-height:48px" onClick="{{ restart }}">New game</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showOver }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:20px;background:color-mix(in srgb, #04050a 90%, transparent);backdrop-filter:blur(8px);animation:fadein 220ms ease">
+<div class="dialog" style="width:100%;gap:14px;padding:22px;animation:rise 260ms ease">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<div class="card-kicker">{{ overKicker }} · {{ player }}</div>
+<sc-if value="{{ isNewBest }}" hint-placeholder-val="{{ false }}"><span class="tag tag-outline">New best</span></sc-if>
+</div>
+<div style="font-size:56px;font-weight:500;letter-spacing:-0.04em;line-height:1;font-variant-numeric:tabular-nums">{{ score }}</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;color:var(--color-neutral-100)">Top tile</span><span style="font-size:17px;color:var(--color-accent-300);font-variant-numeric:tabular-nums">{{ topTile }}</span></div>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;color:var(--color-neutral-100)">Moves</span><span style="font-size:17px;font-variant-numeric:tabular-nums">{{ moves }}</span></div>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;color:var(--color-neutral-100)">Best</span><span style="font-size:17px;font-variant-numeric:tabular-nums">{{ best }}</span></div>
+</div>
+<sc-if value="{{ hasRank }}" hint-placeholder-val="{{ false }}"><button onClick="{{ goBoard }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:17px;color:var(--color-accent-200)"><i class="ph ph-trophy" style="font-size:19px"></i>{{ rankLabel }}<i class="ph ph-caret-right" style="font-size:15px"></i></button></sc-if>
+<div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+<button class="btn btn-primary" style="min-height:48px" onClick="{{ restart }}">Play again</button>
+<div style="display:flex;gap:8px">
+<sc-if value="{{ canUndoOver }}" hint-placeholder-val="{{ false }}"><button class="btn btn-secondary" style="flex:1;min-height:48px" onClick="{{ undo }}"><i class="ph ph-arrow-u-up-left" style="font-size:18px"></i>Undo</button></sc-if>
+<button class="btn btn-secondary" style="flex:1;min-height:48px" onClick="{{ goHome }}">Home</button>
+</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showBgPrompt }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;z-index:31;display:flex;align-items:center;justify-content:center;padding:20px;background:color-mix(in srgb, #04050a 90%, transparent);backdrop-filter:blur(8px);animation:fadein 200ms ease">
+<div class="dialog" style="width:100%;max-width:360px;max-height:calc(100dvh - 40px);overflow-y:auto;box-sizing:border-box;gap:12px;padding:18px;animation:rise 240ms ease">
+<div class="dialog-title" style="font-size:18px;line-height:1.3;text-wrap:pretty">{{ bgPromptTitle }}</div>
+<div class="dialog-body" style="margin:0;font-size:16px">Pick one below. You can change it later in Settings.</div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+<sc-for list="{{ bgPromptOptions }}" as="o" hint-placeholder-count="2">
+<button onClick="{{ o.pick }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:6px">
+<div style="height:clamp(96px, 22dvh, 150px);border-radius:var(--radius-md);background:{{ o.thumb }};box-shadow:inset 0 0 0 1px var(--color-accent-300), 0 0 14px color-mix(in srgb, var(--color-accent-300) 35%, transparent)"></div>
+<div style="font-size:16px;text-align:center">{{ o.label }}</div>
+</button>
+</sc-for>
+</div>
+<button class="btn btn-secondary" style="min-height:44px" onClick="{{ skipBgPrompt }}">Not now</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showPlayers }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ closePlayers }}" style="position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:20px;background:color-mix(in srgb, #04050a 90%, transparent);backdrop-filter:blur(8px);animation:fadein 200ms ease">
+<div onClick="{{ stop }}" class="dialog" style="width:100%;gap:12px;padding:20px;animation:rise 240ms ease">
+<div class="dialog-title" style="font-size:20px">{{ sheetTitle }}</div>
+<sc-if value="{{ needsName }}" hint-placeholder-val="{{ false }}"><div class="dialog-body" style="margin:0">Hi there! This is how you'll show up on the leaderboard. A nickname works too.</div></sc-if>
+<div style="display:flex;flex-direction:column;gap:4px;max-height:300px;overflow-y:auto">
+<sc-for list="{{ playersList }}" as="p" hint-placeholder-count="3">
+<button onClick="{{ p.pick }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:12px;min-height:48px;padding:0 10px;border-radius:var(--radius-md);box-shadow:{{ p.ring }}">
+<span style="flex:none;width:32px;height:32px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;background:{{ p.bg }};color:var(--color-neutral-900)">{{ p.initial }}</span>
+<span style="flex:1;min-width:0;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span>
+<span style="font-size:15px;color:var(--color-neutral-200);font-variant-numeric:tabular-nums">{{ p.best }}</span>
+</button>
+</sc-for>
+</div>
+<div style="display:flex;gap:8px">
+<input class="input" style="flex:1;min-height:44px;font-size:19px" placeholder="Player name" maxlength="16" value="{{ newName }}" onChange="{{ typeName }}" onKeyDown="{{ nameKey }}">
+<button class="btn btn-primary" style="min-height:44px;padding:0 16px" disabled="{{ addDisabled }}" onClick="{{ addPlayer }}">{{ addLabel }}</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showReset }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:20px;background:color-mix(in srgb, #04050a 90%, transparent);backdrop-filter:blur(8px);animation:fadein 200ms ease">
+<div class="dialog" style="width:100%">
+<div class="dialog-title">Reset all stats?</div>
+<div class="dialog-body">Best scores, top tiles and game counts for every mode and board size will be cleared.</div>
+<div class="dialog-actions">
+<button class="btn btn-secondary" style="min-height:44px" onClick="{{ cancelReset }}">Cancel</button>
+<button class="btn btn-primary" style="min-height:44px" onClick="{{ doReset }}">Reset</button>
+</div>
+</div>
+</div>
+</sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;font&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Inter&quot;,&quot;Space Grotesk&quot;,&quot;Sora&quot;,&quot;Outfit&quot;,&quot;JetBrains Mono&quot;],&quot;default&quot;:&quot;Space Grotesk&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;startScreen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;home&quot;,&quot;game&quot;,&quot;stats&quot;,&quot;settings&quot;],&quot;default&quot;:&quot;home&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;demoBoard&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const MODES = [
+  { id: 'classic', name: 'Classic', icon: 'ph-squares-four', desc: 'Reach the target tile. Three undos per game.' },
+  { id: 'blitz', name: 'Blitz', icon: 'ph-timer', desc: 'Two minutes on the clock. Score as much as you can.' },
+  { id: 'rocks', name: 'Rocks', icon: 'ph-cube', desc: 'Immovable rocks drop in and crumble after 12 moves.' },
+];
+const SIZES = [3, 4, 5, 6];
+const FONTS = { 'Inter': '"Inter", system-ui, sans-serif', 'Space Grotesk': '"Space Grotesk", system-ui, sans-serif', 'Sora': '"Sora", system-ui, sans-serif', 'Outfit': '"Outfit", system-ui, sans-serif', 'JetBrains Mono': '"JetBrains Mono", ui-monospace, monospace' };
+const KEY = 'n2048.live.v2';
+const BLITZ = 120;
+const target = n => (n === 3 ? 512 : 2048);
+const fmt = n => n.toLocaleString('en-US');
+let UID = 1;
+const DEFAULT_BG = 'radial-gradient(120% 55% at 50% 0%, #2b3166 0%, #141731 45%, #0b0c18 100%)';
+const NIGHT = 'radial-gradient(120% 70% at 50% 30%, #6a6fb4 0%, #3a3f80 60%, #262a5c 100%)';
+const BGS = [
+  { id: 'cat-sunset', who: ['soninoni'], label: 'Cats · sunset', css: 'url(cat.png) center / cover no-repeat', dim: 'rgba(8,9,19,.42)' },
+  { id: 'cat-clear', who: ['soninoni'], label: 'Cats · night', css: 'url(cat-clear.png) center / cover no-repeat, ' + NIGHT, dim: 'rgba(8,9,19,.22)' },
+  { id: 'dog-purple', who: ['jopjop', 'lizardlis'], label: 'Pups · purple', css: 'url(dog.jpg) center / cover no-repeat', dim: 'rgba(8,9,19,.35)' },
+  { id: 'dog-clear', who: ['jopjop', 'lizardlis'], label: 'Pups · night', css: 'url(dog-clear.png) center / cover no-repeat, ' + NIGHT, dim: 'rgba(8,9,19,.22)' },
+  { id: 'crab-sky', who: ['sophiphi'], label: 'Crab · sky', css: 'url(crab.png) center / cover no-repeat', dim: 'rgba(8,9,19,.4)' },
+  { id: 'crab-clear', who: ['sophiphi'], label: 'Crab · night', css: 'url(crab-clear.png) center / cover no-repeat, ' + NIGHT, dim: 'rgba(8,9,19,.22)' },
+];
+let hapLabel = null;
+function haptic(kind) {
+  try {
+    if (navigator.vibrate) { navigator.vibrate(kind === 'big' ? [16, 50, 26] : kind === 'merge' ? 14 : 7); return; }
+    if (!hapLabel) {
+      hapLabel = document.createElement('label');
+      hapLabel.setAttribute('aria-hidden', 'true');
+      hapLabel.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none';
+      const i = document.createElement('input'); i.type = 'checkbox'; i.setAttribute('switch', ''); i.tabIndex = -1;
+      hapLabel.appendChild(i); document.body.appendChild(hapLabel);
+    }
+    hapLabel.click();
+  } catch (e) {}
+}
+const API = '/api/scores';
+const AV = ['var(--color-accent-200)', 'var(--color-accent-300)', 'var(--color-neutral-200)', 'var(--color-accent-100)', 'var(--color-neutral-300)', 'var(--color-accent-400)'];
+const avBg = name => { let h = 0; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return AV[h % AV.length]; };
+const ini = name => (name.trim()[0] || '?').toUpperCase();
+
+const tok = s => s[0] === '#' ? s : s === 'sg' ? 'var(--color-section-glow)' : s === '-' ? 'transparent'
+  : `var(--color-${s[0] === 'n' ? 'neutral' : 'accent'}-${s.slice(1)})`;
+const LOOKS = {
+  retro: {
+    bg: ['#2a2f5a', '#3b3f8f', '#2f7fd8', '#20b2c8', '#22c48a', '#9bd13c', '#f2c230', '#f2913a', '#ec5a5a', '#e04fb0', '#b46bff', '#f3f0ff'],
+    fg: ['#dfe2ff', '#eef0ff', '#0b0c18', '#0b0c18', '#0b0c18', '#0b0c18', '#0b0c18', '#0b0c18', '#0b0c18', '#0b0c18', '#0b0c18', '#2a1d6b'],
+  },
+  blurple: {
+    bg: ['n300', 'n200', 'a300', 'a200', 'a400', 'a500', 'a100', 'a200', 'a300', 'a200', 'a100', 'a100'],
+    fg: ['n900', 'n900', 'a900', 'a900', 'a900', 'a900', 'a800', 'a800', 'a900', 'a900', 'a900', 'a900'],
+    bd: ['-', '-', '-', '-', '-', '-', 'a400', 'a400', 'a100', 'a100', 'a100', 'a100'],
+  },
+  mono: {
+    bg: ['n600', 'n500', 'n400', 'n300', 'n200', 'n100', 'n200', 'n100', 'n200', 'n100', 'a100', 'a100'],
+    fg: ['n100', 'n900', 'n900', 'n900', 'n900', 'n900', 'a800', 'a800', 'a900', 'a900', 'a900', 'a900'],
+    bd: ['-', '-', '-', '-', '-', '-', '-', '-', 'a500', 'a300', 'a200', 'a100'],
+  },
+  outline: {
+    bg: null, bgc: 'color-mix(in srgb, var(--color-text) 6%, transparent)',
+    fg: ['n100', 'n100', 'a100', 'a100', 'a100', 'a100', 'a100', 'a100', 'a100', 'a100', 'a100', 'a100'],
+    bd: ['n300', 'n200', 'a400', 'a300', 'a300', 'a200', 'a200', 'a100', 'a100', 'a100', 'a100', 'a100'],
+  },
+};
+function look(v, theme) {
+  if (theme === 'retro') {
+    const R = LOOKS.retro, j = Math.min(Math.log2(v) - 1, 11), c = R.bg[j];
+    return { background: c, color: R.fg[j], boxShadow: 'inset 0 -5px 0 rgba(0,0,0,.28), inset 0 3px 0 rgba(255,255,255,.18)' + (v >= 512 ? `, 0 0 0 2px ${c}66, 0 0 18px ${c}99` : '') };
+  }
+  const L = LOOKS[theme] || LOOKS.blurple;
+  const i = Math.min(Math.log2(v) - 1, 11);
+  const glow = v >= 2048 ? '0 0 36px color-mix(in srgb, var(--color-accent-300) 85%, transparent)'
+    : v >= 1024 ? '0 0 26px color-mix(in srgb, var(--color-accent-300) 70%, transparent)'
+    : v >= 512 ? '0 0 18px color-mix(in srgb, var(--color-accent-300) 55%, transparent)' : null;
+  const sh = [];
+  if (L.bd[i] !== '-') sh.push(`inset 0 0 0 ${L.bg ? 2 : 1.5}px ${tok(L.bd[i])}`);
+  if (glow) sh.push(glow);
+  return {
+    background: L.bg ? tok(L.bg[i]) : L.bgc,
+    color: tok(L.fg[i]),
+    boxShadow: sh.length ? sh.join(', ') : 'none',
+  };
+}
+
+function emptyCells(tiles, n) {
+  const occ = new Set(tiles.filter(t => !t.gone).map(t => t.r * n + t.c));
+  const out = [];
+  for (let i = 0; i < n * n; i++) if (!occ.has(i)) out.push(i);
+  return out;
+}
+function spawn(tiles, n) {
+  const e = emptyCells(tiles, n);
+  if (!e.length) return tiles;
+  const p = e[Math.floor(Math.random() * e.length)];
+  return [...tiles, { id: UID++, v: Math.random() < 0.9 ? 2 : 4, r: Math.floor(p / n), c: p % n, isNew: true }];
+}
+function canMove(tiles, n) {
+  if (emptyCells(tiles, n).length) return true;
+  const g = {};
+  tiles.forEach(t => { if (!t.gone) g[t.r * n + t.c] = t; });
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+    const t = g[r * n + c]; if (!t || t.rock) continue;
+    const rt = c < n - 1 && g[r * n + c + 1], dn = r < n - 1 && g[(r + 1) * n + c];
+    if (rt && !rt.rock && rt.v === t.v) return true;
+    if (dn && !dn.rock && dn.v === t.v) return true;
+  }
+  return false;
+}
+const pos = (d, i, k, n) => d === 'left' ? [i, k] : d === 'right' ? [i, n - 1 - k] : d === 'up' ? [k, i] : [n - 1 - k, i];
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) {}
+    if (saved.game) UID = Math.max(1, ...saved.game.tiles.map(t => t.id + 1));
+    this.state = {
+      screen: props.startScreen || 'home',
+      mode: saved.mode || 'classic',
+      size: saved.size || 4,
+      theme: saved.theme || 'blurple',
+      motion: saved.motion ?? true,
+      showHint: saved.showHint ?? true,
+      stats: saved.stats || {},
+      game: saved.game || null,
+      statMode: 'classic',
+      haptics: saved.haptics ?? true, bgPick: saved.bgPick || {}, bgAsked: saved.bgAsked || {}, bgPrompt: false,
+      player: saved.player || '',
+      players: saved.players || [],
+      lb: (saved.lb || []).filter(e => !String(e.id).startsWith('seed')),
+      remote: {}, lbStatus: '', lastRank: null,
+      lbMode: null, lbSize: null, showPlayers: !saved.player, newName: '',
+      showReset: false,
+      pop: null,
+    };
+    if (this.state.screen === 'game' && !this.state.game) this.state.game = this.makeGame(this.state.mode, this.state.size);
+  }
+  componentDidMount() {
+    this.onResize = () => this.forceUpdate();
+    window.addEventListener('resize', this.onResize);
+    this.askBg(this.state.player);
+    this.onKey = e => {
+      if (this.state.screen !== 'game') return;
+      const m = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', a: 'left', d: 'right', w: 'up', s: 'down' }[e.key];
+      if (m) { e.preventDefault(); this.move(m); }
+    };
+    window.addEventListener('keydown', this.onKey);
+    this.timer = setInterval(() => {
+      const { game, screen } = this.state;
+      if (screen !== 'game' || !game || game.mode !== 'blitz' || game.over || game.moves === 0) return;
+      const t = game.timeLeft - 1;
+      const ng = { ...game, timeLeft: Math.max(0, t), over: t <= 0 ? 'time' : false };
+      this.setState(ng.over ? this.record(ng) : { game: ng });
+    }, 1000);
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this.onResize); window.removeEventListener('keydown', this.onKey); clearInterval(this.timer); }
+  componentDidUpdate() {
+    const { mode, size, theme, motion, showHint, stats, game, player, players, lb, haptics, bgPick, bgAsked } = this.state;
+    try { localStorage.setItem(KEY, JSON.stringify({ mode, size, theme, motion, showHint, stats, player, players, lb, haptics, bgPick, bgAsked, game: game && { ...game, tiles: game.tiles.filter(t => !t.gone) } })); } catch (e) {}
+  }
+
+  record(g) {
+    if (!g || g.recorded || g.score <= 0) return { game: g, lb: this.state.lb };
+    const live = g.tiles.filter(t => !t.gone && !t.rock);
+    const id = 'e' + Date.now() + Math.random().toString(36).slice(2, 7);
+    const entry = { id, name: this.state.player, score: g.score, tile: live.length ? Math.max(...live.map(t => t.v)) : 0, mode: g.mode, size: g.size, t: Date.now() };
+    this.submit(entry);
+    return { game: { ...g, recorded: true, entryId: id }, lb: [...this.state.lb, entry].slice(-300) };
+  }
+
+  submit(entry) {
+    fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(entry) })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d && d.rank) this.setState({ lastRank: { id: entry.id, rank: d.rank, total: d.total } }); this.fetchBoard(entry.mode, entry.size); })
+      .catch(() => {});
+  }
+
+  fetchBoard(mode, size) {
+    const k = mode + '-' + size;
+    this.setState({ lbStatus: 'loading' });
+    fetch(API + '?mode=' + mode + '&size=' + size)
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(list => this.setState(st => ({ remote: { ...st.remote, [k]: list }, lbStatus: '' })))
+      .catch(() => this.setState({ lbStatus: 'offline' }));
+  }
+
+  makeGame(mode, size) {
+    let tiles = [];
+    if (this.props.demoBoard && size >= 4) {
+      const pre = [[1024, 512, 256, 128], [4, 8, 16, 64], [2, 0, 32, 0], [0, 2, 0, 0]];
+      pre.forEach((row, r) => row.forEach((v, c) => { if (v) tiles.push({ id: UID++, v, r, c, isNew: true }); }));
+    } else {
+      tiles = spawn(spawn([], size), size);
+    }
+    const key = mode + '-' + size;
+    return { mode, size, tiles, score: 0, moves: 0, over: false, won: false, keepGoing: false,
+      history: [], undos: 3, timeLeft: BLITZ, prevBest: (this.state?.stats?.[key]?.best) || 0, rocksSpawned: 0 };
+  }
+
+  move(dir) {
+    const g = this.state.game;
+    if (!g || g.over || (g.won && !g.keepGoing)) return;
+    const n = g.size;
+    const tiles = g.tiles.filter(t => !t.gone).map(t => ({ ...t, isNew: false, merged: false }));
+    const grid = {};
+    tiles.forEach(t => { grid[t.r * n + t.c] = t; });
+    let moved = false, gained = 0;
+    for (let i = 0; i < n; i++) {
+      const line = [];
+      for (let k = 0; k < n; k++) line.push(pos(dir, i, k, n));
+      const segs = []; let cur = [];
+      line.forEach(([r, c]) => { const t = grid[r * n + c]; if (t && t.rock) { segs.push(cur); cur = []; } else cur.push([r, c]); });
+      segs.push(cur);
+      segs.forEach(seg => {
+        const items = seg.map(([r, c]) => grid[r * n + c]).filter(Boolean);
+        let idx = 0, last = null;
+        items.forEach(t => {
+          if (last && last.v === t.v && !last.merged) {
+            t.r = last.r; t.c = last.c; t.gone = true;
+            last.v *= 2; last.merged = true; gained += last.v; moved = true;
+          } else {
+            const [r, c] = seg[idx++];
+            if (t.r !== r || t.c !== c) moved = true;
+            t.r = r; t.c = c; last = t;
+          }
+        });
+      });
+    }
+    if (!moved) return;
+    const moves = g.moves + 1;
+    let next = tiles.filter(t => !(t.rock && --t.life <= 0));
+    next = spawn(next, n);
+    let rocksSpawned = g.rocksSpawned;
+    if (g.mode === 'rocks' && moves % 15 === 0 && next.filter(t => t.rock).length < (n >= 5 ? 2 : 1)) {
+      const e = emptyCells(next, n);
+      if (e.length > 1) {
+        const p = e[Math.floor(Math.random() * e.length)];
+        next.push({ id: UID++, rock: true, life: 12, v: 0, r: Math.floor(p / n), c: p % n, isNew: true });
+        rocksSpawned++;
+      }
+    }
+    const score = g.score + gained;
+    const live = next.filter(t => !t.gone && !t.rock);
+    const top = Math.max(...live.map(t => t.v));
+    const won = g.won || top >= target(n);
+    const over = canMove(next, n) ? false : 'stuck';
+    if (this.state.haptics) haptic(over || gained >= 512 ? 'big' : gained ? 'merge' : 'move');
+    const history = [...g.history, { tiles: g.tiles.filter(t => !t.gone), score: g.score, moves: g.moves }].slice(-10);
+    const key = g.mode + '-' + n;
+    const s = { ...(this.state.stats[key] || { best: 0, played: 0, tile: 0 }) };
+    if (moves === 1) s.played++;
+    s.best = Math.max(s.best, score); s.tile = Math.max(s.tile, top);
+    let ng = { ...g, tiles: next, score, moves, won, over, history, rocksSpawned }, lb = this.state.lb;
+    if (over) ({ game: ng, lb } = this.record(ng));
+    this.setState({
+      lb, game: ng,
+      stats: { ...this.state.stats, [key]: s },
+      pop: gained ? { k: moves, v: gained } : this.state.pop,
+    });
+    clearTimeout(this.prune);
+    this.prune = setTimeout(() => {
+      const gg = this.state.game;
+      if (gg && gg.tiles.some(t => t.gone)) this.setState({ game: { ...gg, tiles: gg.tiles.filter(t => !t.gone) } });
+    }, 90);
+  }
+
+  undo = () => {
+    const g = this.state.game;
+    if (!g || !g.history.length || g.undos <= 0 || g.mode === 'blitz') return;
+    const h = g.history[g.history.length - 1];
+    this.setState({ game: { ...g, tiles: h.tiles.map(t => ({ ...t, isNew: false, merged: false })), score: h.score, moves: h.moves,
+      history: g.history.slice(0, -1), undos: g.undos - 1, over: false } });
+  };
+
+  newGame = () => { const { lb } = this.record(this.state.game); this.setState({ lb, game: this.makeGame(this.state.mode, this.state.size), screen: 'game', pop: null }); };
+  addPlayer = () => {
+    const n = this.state.newName.replace(/[^\p{L}\p{N} _.\-]/gu, '').trim().slice(0, 16);
+    if (!n) return;
+    const players = this.state.players.includes(n) ? this.state.players : [...this.state.players, n];
+    this.setState({ players, player: n, newName: '', showPlayers: false }, () => this.askBg(n));
+  };
+
+  renderBoard() {
+    const g = this.state.game;
+    if (!g) return null;
+    const h = React.createElement, n = g.size, px = Math.floor(Math.max(240, Math.min(window.innerWidth - 32, 560, window.innerHeight - 380)));
+    const gap = n <= 4 ? 10 : n === 5 ? 8 : 7;
+    const cell = (px - gap * (n + 1)) / n;
+    const retro = this.state.theme === 'retro';
+    const rad = retro ? 0 : n >= 5 ? 6 : 8;
+    const motion = this.state.motion;
+    const kids = [];
+    for (let i = 0; i < n * n; i++) {
+      kids.push(h('div', { key: 'c' + i, style: { position: 'absolute', left: gap + (i % n) * (cell + gap), top: gap + Math.floor(i / n) * (cell + gap),
+        width: cell, height: cell, borderRadius: rad, background: '#1a1d33' } }));
+    }
+    const mergeAnim = g.moves % 2 ? 'tmergeA' : 'tmergeB';
+    g.tiles.forEach(t => {
+      const x = gap + t.c * (cell + gap), y = gap + t.r * (cell + gap);
+      let inner;
+      if (t.rock) {
+        inner = h('div', { style: { width: '100%', height: '100%', borderRadius: rad, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
+          background: 'repeating-linear-gradient(135deg, var(--color-neutral-900) 0 6px, var(--color-neutral-800) 6px 7px)',
+          boxShadow: 'inset 0 0 0 1px var(--color-neutral-700)', color: 'var(--color-neutral-400)', opacity: t.life <= 3 ? 0.55 : 1,
+          animation: t.isNew && motion ? 'tpop 200ms ease 60ms both' : 'none', transition: 'opacity 200ms' } },
+          h('i', { className: 'ph ph-cube', style: { fontSize: cell * 0.32 } }),
+          h('span', { style: { fontSize: Math.max(10, cell * 0.14), fontVariantNumeric: 'tabular-nums' } }, t.life));
+      } else {
+        const d = String(t.v).length;
+        const fs = cell * (d <= 2 ? 0.42 : d === 3 ? 0.34 : d === 4 ? 0.27 : 0.22);
+        inner = h('div', { style: { width: '100%', height: '100%', borderRadius: rad, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: retro ? fs * 0.6 : fs, fontWeight: retro ? 400 : 600, letterSpacing: retro ? '0' : '-0.03em', fontFamily: retro ? '"Press Start 2P", monospace' : 'inherit', fontVariantNumeric: 'tabular-nums', ...look(t.v, this.state.theme),
+          animation: !motion ? 'none' : t.isNew ? 'tpop 120ms ease 60ms both' : t.merged ? `${mergeAnim} 140ms ease 55ms` : 'none',
+          transition: 'background 120ms, box-shadow 200ms' } }, t.v);
+      }
+      kids.push(h('div', { key: t.id, style: { position: 'absolute', left: 0, top: 0, width: cell, height: cell, zIndex: t.gone ? 1 : t.merged ? 3 : 2,
+        transform: `translate(${x}px, ${y}px)`, transition: motion ? 'transform 75ms ease-out' : 'none' } }, inner));
+    });
+    if (retro) kids.push(h('div', { key: 'scan', style: { position: 'absolute', inset: 0, zIndex: 6, pointerEvents: 'none', background: 'repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px)' } }));
+    return h('div', {
+      style: { position: 'relative', width: px, height: px, borderRadius: retro ? 0 : 14, background: '#080913', boxShadow: retro ? '0 0 0 3px #4a50b8, 0 0 0 6px #080913, 0 0 0 8px #4a50b8, 0 0 30px rgba(110,120,255,.35)' : '0 0 0 1px color-mix(in srgb, var(--color-accent) 35%, transparent), 0 0 40px color-mix(in srgb, var(--color-accent) 18%, transparent)', touchAction: 'none', cursor: 'grab' },
+    }, kids);
+  }
+
+  swipeDir(e, min) {
+    const s = this.start; if (!s) return null;
+    const dx = e.clientX - s.x, dy = e.clientY - s.y;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < min) return null;
+    return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+  }
+  swDown = e => { if (e.target.closest && e.target.closest('button')) return; this.start = { x: e.clientX, y: e.clientY, done: false }; };
+  swMove = e => { const s = this.start; if (!s || s.done) return; const d = this.swipeDir(e, 14); if (d) { s.done = true; this.move(d); } };
+  swUp = e => { const s = this.start; if (s && !s.done) { const d = this.swipeDir(e, 10); if (d) this.move(d); } this.start = null; };
+  swCancel = () => { this.start = null; };
+
+  askBg(name) {
+    const key = (name || '').trim().toLowerCase();
+    if (key && BGS.some(b => b.who.includes(key)) && !this.state.bgAsked[key]) this.setState({ bgPrompt: true });
+  }
+  closeBgPrompt(key, id) {
+    this.setState(s => ({ bgPrompt: false, bgAsked: { ...s.bgAsked, [key]: true }, bgPick: id ? { ...s.bgPick, [key]: id } : s.bgPick }));
+  }
+
+  bgVals() {
+    const key = (this.state.player || '').trim().toLowerCase();
+    const opts = BGS.filter(b => b.who.includes(key));
+    const cur = opts.find(b => b.id === this.state.bgPick[key]);
+    const curId = cur ? cur.id : 'none';
+    return {
+      hasBg: !!cur, bgCss: cur ? cur.css : '', bgDim: cur ? cur.dim : '',
+      hasBgOptions: opts.length > 0,
+      showBgPrompt: this.state.bgPrompt && opts.length > 0,
+      bgPromptTitle: 'Hey ' + this.state.player + '! Do you want to use your custom background?',
+      bgPromptOptions: opts.map(o => ({ label: o.label, thumb: o.css, pick: () => this.closeBgPrompt(key, o.id) })),
+      skipBgPrompt: () => this.closeBgPrompt(key, null), bgUnlockNote: 'Unlocked for ' + this.state.player,
+      bgOptions: [{ id: 'none', label: 'Default', css: DEFAULT_BG }, ...opts].map(o => ({
+        label: o.label, thumb: o.css,
+        ring: o.id === curId ? 'inset 0 0 0 2px var(--color-accent-200), 0 0 16px color-mix(in srgb, var(--color-accent-300) 45%, transparent)' : 'inset 0 0 0 1px var(--color-neutral-700)',
+        pick: () => this.setState(s => ({ bgPick: { ...s.bgPick, [key]: o.id } })),
+      })),
+    };
+  }
+
+  boardVals(g, gm, gs) {
+    const { player, players, lb, showPlayers, newName, lastRank } = this.state;
+    const lm = this.state.lbMode || gm, lsz = this.state.lbSize || gs;
+    const remote = this.state.remote[lm + '-' + lsz];
+    const local = lb.filter(e => e.mode === lm && e.size === lsz);
+    const src = remote ? [...remote, ...local.filter(e => !remote.some(r => r.id === e.id))] : local;
+    const rows = src.slice().sort((a, b) => b.score - a.score);
+    const st = this.state.lbStatus;
+    const top = rows.slice(0, 20);
+    const lastId = g && g.entryId;
+    const rankIdx = lastId ? rows.findIndex(e => e.id === lastId) : -1;
+    const bestOf = n => { const b = lb.filter(e => e.name === n); return b.length ? 'Best ' + fmt(Math.max(...b.map(e => e.score))) : ''; };
+    return {
+      player, me: { bg: avBg(player), initial: ini(player) },
+      openPlayers: () => this.setState({ showPlayers: true }), closePlayers: () => { if (this.state.player) this.setState({ showPlayers: false }); },
+      sheetTitle: player ? "Who's playing?" : "Enter your player name", needsName: !player,
+      lbNote: st === 'loading' ? 'Loading scores…' : st === 'offline' ? "Can't reach the leaderboard right now. Showing scores from this phone." : 'Everyone who plays at this link shows up here. Top 100 per board.', stop: e => e.stopPropagation(),
+      showPlayers, newName, typeName: e => this.setState({ newName: e.target.value }), nameKey: e => { if (e.key === 'Enter') this.addPlayer(); },
+      addDisabled: !newName.trim(), addLabel: player ? 'Add' : "Let's play", addPlayer: this.addPlayer,
+      playersList: players.map(n => ({ name: n, bg: avBg(n), initial: ini(n), best: bestOf(n),
+        ring: n === player ? 'inset 0 0 0 1px var(--color-accent)' : 'none', pick: () => this.setState({ player: n, showPlayers: false }, () => this.askBg(n)) })),
+      lbModes: MODES.map(m => ({ ...m, checked: m.id === lm, pick: () => { this.setState({ lbMode: m.id }); this.fetchBoard(m.id, lsz); } })),
+      lbSizes: SIZES.map(z => ({ label: z + '×' + z, checked: z === lsz, pick: () => { this.setState({ lbSize: z }); this.fetchBoard(lm, z); } })),
+      lbRows: top.map((e, i) => ({ ...e, rank: i + 1, score: fmt(e.score), bg: avBg(e.name), initial: ini(e.name),
+        meta: 'Top tile ' + e.tile + (e.id === lastId ? ' · just now' : ''),
+        rankColor: i < 3 ? 'var(--color-accent-200)' : 'var(--color-neutral-200)',
+        ring: e.id === lastId ? 'inset 0 0 0 1px var(--color-accent-200), 0 0 18px color-mix(in srgb, var(--color-accent-300) 40%, transparent)' : e.name === player ? 'inset 0 0 0 1px var(--color-accent-700)' : 'none' })),
+      lbEmpty: top.length === 0,
+      hasRank: rankIdx >= 0, rankLabel: lastRank && lastRank.id === lastId ? '#' + lastRank.rank + ' of ' + lastRank.total + ' on the ' + gs + '×' + gs + ' leaderboard' : rankIdx >= 0 ? '#' + (rankIdx + 1) + ' of ' + rows.length + ' on the ' + gs + '×' + gs + ' leaderboard' : '',
+    };
+  }
+
+  renderVals() {
+    const fontStack = this.state.theme === 'retro' ? '"JetBrains Mono", ui-monospace, monospace' : FONTS[this.props.font] || FONTS['Outfit'];
+    const { screen, mode, size, theme, motion, showHint, stats, game: g, statMode, showReset, pop } = this.state;
+    const go = s => () => this.setState({ screen: s });
+    const ring = on => on ? 'inset 0 0 0 3px var(--color-accent-200), 0 0 0 1px var(--color-accent-100), 0 0 26px color-mix(in srgb, var(--color-accent-300) 75%, transparent)' : 'inset 0 0 0 1px var(--color-neutral-600)';
+    const gm = g ? g.mode : mode, gs = g ? g.size : size;
+    const curMode = screen === 'game' ? gm : mode, curSize = screen === 'game' ? gs : size;
+    const key = gm + '-' + gs;
+    const best = (stats[key] && stats[key].best) || 0;
+    const live = g ? g.tiles.filter(t => !t.gone && !t.rock) : [];
+    const topTile = live.length ? Math.max(...live.map(t => t.v)) : 0;
+    const all = Object.values(stats);
+    const tl = g ? g.timeLeft : BLITZ;
+    const sw = (label, desc, val, k) => ({ label, desc, flip: () => this.setState({ [k]: !val }),
+      track: val ? 'inset 0 0 0 1px var(--color-accent)' : 'inset 0 0 0 1px var(--color-neutral-700)',
+      knob: val ? 'var(--color-accent)' : 'var(--color-neutral-600)', knobX: val ? '22px' : '4px' });
+    return {
+      fontStack, isRetro: this.state.theme === 'retro',
+      ...this.bgVals(), swDown: this.swDown, swMove: this.swMove, swUp: this.swUp, swCancel: this.swCancel,
+      isHome: screen === 'home', isGame: screen === 'game', isStats: screen === 'stats', isSettings: screen === 'settings', isBoard: screen === 'board',
+      goHome: go('home'), goStats: go('stats'), goSettings: go('settings'),
+      goBoard: () => { this.setState({ screen: 'board', lbMode: gm, lbSize: gs }); this.fetchBoard(gm, gs); },
+      ...this.boardVals(g, gm, gs),
+      modes: MODES.map(m => {
+        const b = stats[m.id + '-' + size];
+        return { ...m, best: b && b.best ? fmt(b.best) : '—', ring: ring(m.id === mode),
+          iconColor: m.id === mode ? 'var(--color-accent)' : 'var(--color-neutral-200)', pick: () => this.setState({ mode: m.id }) };
+      }),
+      sizes: SIZES.map(s => ({ label: `${s}×${s}`, checked: s === size, pick: () => this.setState({ size: s }) })),
+      modeName: MODES.find(m => m.id === curMode).name, sizeLabel: `${curSize}×${curSize}`,
+      hasSaved: !!(g && g.moves > 0 && !g.over),
+      savedLabel: g ? `${MODES.find(m => m.id === g.mode).name} ${g.size}×${g.size} · ${fmt(g.score)}` : '',
+      resume: go('game'), play: this.newGame,
+      restart: () => { const { lb } = this.record(g); this.setState({ lb, game: this.makeGame(gm, gs), pop: null }); },
+      score: g ? fmt(g.score) : '0', best: fmt(best), moves: g ? g.moves : 0,
+      scorePop: pop ? React.createElement('span', { key: pop.k, style: { display: 'inline-block', animation: 'scoreup 650ms ease forwards' } }, '+' + pop.v) : null,
+      isBlitz: gm === 'blitz',
+      timeLabel: `${Math.floor(tl / 60)}:${String(tl % 60).padStart(2, '0')}`,
+      timePct: (tl / BLITZ * 100) + '%',
+      timeColor: tl <= 15 ? 'var(--color-accent-300)' : 'var(--color-text)',
+      goalLabel: gm === 'blitz' ? (g && g.moves === 0 ? 'Clock starts on your first move' : `Top tile ${topTile}`)
+        : gm === 'rocks' ? `Target ${target(gs)} · rocks every 15 moves` : `Target ${target(gs)} · top tile ${topTile}`,
+      movesLabel: `${g ? g.moves : 0} moves`,
+      board: this.renderBoard(),
+      hint: showHint ? 'Swipe the board, or use arrow keys' : '',
+      showUndo: gm !== 'blitz', undoDisabled: !g || !g.history.length || g.undos <= 0, undosLeft: g ? g.undos : 3, undo: this.undo,
+      showWin: screen === 'game' && !!g && g.won && !g.keepGoing && !g.over,
+      keepGoing: () => this.setState({ game: { ...g, keepGoing: true } }),
+      targetLabel: target(gs),
+      tagLabel: MODES.find(m => m.id === curMode).name + ' · ' + curSize + '×' + curSize,
+      playLabel: 'New ' + MODES.find(m => m.id === curMode).name + ' game · ' + curSize + '×' + curSize,
+      winTitle: 'You made ' + target(gs) + '.',
+      winBody: (g ? fmt(g.score) : 0) + ' points in ' + (g ? g.moves : 0) + ' moves. Keep going for a bigger tile, or bank it and start fresh.',
+      showOver: screen === 'game' && !!g && !!g.over,
+      overKicker: g && g.over === 'time' ? "Time's up" : 'Out of moves',
+      isNewBest: !!g && g.score > 0 && g.score > g.prevBest,
+      topTile, canUndoOver: !!g && g.over === 'stuck' && g.mode !== 'blitz' && g.undos > 0 && g.history.length > 0,
+      totals: {
+        played: all.reduce((a, s) => a + s.played, 0),
+        tile: all.length ? Math.max(0, ...all.map(s => s.tile)) || '—' : '—',
+        best: all.length ? fmt(Math.max(0, ...all.map(s => s.best))) : '—',
+      },
+      statModes: MODES.map(m => ({ ...m, checked: m.id === statMode, pick: () => this.setState({ statMode: m.id }) })),
+      statRows: SIZES.map(s => {
+        const st = stats[statMode + '-' + s];
+        return { size: `${s}×${s}`, best: st && st.best ? fmt(st.best) : '—', tile: st && st.tile ? st.tile : '—', played: st ? st.played : 0 };
+      }),
+      rings: { retro: ring(theme === 'retro'), blurple: ring(theme === 'blurple'), mono: ring(theme === 'mono'), outline: ring(theme === 'outline') },
+      pickBlurple: () => this.setState({ theme: 'blurple' }), pickMono: () => this.setState({ theme: 'mono' }), pickOutline: () => this.setState({ theme: 'outline' }), pickRetro: () => this.setState({ theme: 'retro' }),
+      toggles: [sw('Tile motion', 'Slide and merge animations', motion, 'motion'), sw('Swipe hint', 'Show the control hint under the board', showHint, 'showHint'), sw('Haptics', 'Vibrate on swipes and merges', this.state.haptics, 'haptics')],
+      showReset, askReset: () => this.setState({ showReset: true }), cancelReset: () => this.setState({ showReset: false }),
+      doReset: () => this.setState({ stats: {}, lb: [], showReset: false }),
+    };
+  }
+}
+</script>
+</body>
+</html>
