@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <script>
 (function(){function show(m){var d=document.getElementById('__err');if(!d){d=document.createElement('pre');d.id='__err';d.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;z-index:99999;margin:0;padding:10px;background:#2a0f16;color:#ffd6dc;font:12px/1.4 monospace;white-space:pre-wrap;border-radius:8px;max-height:40vh;overflow:auto';(document.body||document.documentElement).appendChild(d);}d.textContent+=m+'\n';}
-window.addEventListener('error',function(e){show('Error: '+(e.message||'')+(e.filename?' @ '+e.filename.split('/').pop()+':'+e.lineno:'')+(e.target&&e.target.src?' load failed: '+e.target.src:'')+(e.target&&e.target.href?' load failed: '+e.target.href:''));},true);
+window.addEventListener('error',function(e){if(!e.target||e.target===window){if(!e.filename||/^Script error\.?$/i.test(e.message||''))return;if(/ResizeObserver/i.test(e.message||''))return;}show('Error: '+(e.message||'')+(e.filename?' @ '+e.filename.split('/').pop()+':'+e.lineno:'')+(e.target&&e.target.src?' load failed: '+e.target.src:'')+(e.target&&e.target.href?' load failed: '+e.target.href:''));},true);
 window.addEventListener('unhandledrejection',function(e){show('Promise: '+(e.reason&&e.reason.message||e.reason));});
 document.addEventListener('securitypolicyviolation',function(e){show('Blocked by CSP: '+e.violatedDirective+' '+e.blockedURI);});
 if(location.protocol==='file:')show('This file must be opened from your Netlify link, not from your computer.');
@@ -28,7 +28,7 @@ if(location.protocol==='file:')show('This file must be opened from your Netlify 
 <link rel="stylesheet" href="phosphor.css">
 <link rel="stylesheet" href="fonts.css">
 <style>
-body{margin:0;background:#0b0c18;min-height:100vh;overscroll-behavior:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}body{margin:0;background:#0b0c18;min-height:100vh;overscroll-behavior:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
 a{color:var(--color-accent)}a:hover{color:var(--color-accent-300)}
 @keyframes tpop{0%{transform:scale(.2);opacity:0}100%{transform:scale(1);opacity:1}}
 @keyframes tmergeA{0%{transform:scale(1)}45%{transform:scale(1.14)}100%{transform:scale(1)}}
@@ -542,7 +542,17 @@ class Component extends DCLogic {
     if (this.state.screen === 'game' && !this.state.game) this.state.game = this.makeGame(this.state.mode, this.state.size);
   }
   componentDidMount() {
-    this.onResize = () => this.forceUpdate();
+    this.vw = window.innerWidth; this.vh = window.innerHeight;
+    this.onResize = () => {
+      if (this.rz) return;
+      this.rz = requestAnimationFrame(() => {
+        this.rz = null;
+        const w = window.innerWidth, h = window.innerHeight;
+        if (Math.abs(w - this.vw) < 2 && Math.abs(h - this.vh) < 60) return;
+        this.vw = w; this.vh = h;
+        try { this.forceUpdate(); } catch (e) {}
+      });
+    };
     window.addEventListener('resize', this.onResize);
     this.askBg(this.state.player);
     this.onKey = e => {
@@ -559,7 +569,7 @@ class Component extends DCLogic {
       this.setState(ng.over ? this.record(ng) : { game: ng });
     }, 1000);
   }
-  componentWillUnmount() { window.removeEventListener('resize', this.onResize); window.removeEventListener('keydown', this.onKey); clearInterval(this.timer); }
+  componentWillUnmount() { if (this.rz) cancelAnimationFrame(this.rz); window.removeEventListener('resize', this.onResize); window.removeEventListener('keydown', this.onKey); clearInterval(this.timer); }
   componentDidUpdate() {
     const { mode, size, theme, motion, showHint, stats, game, player, players, lb, haptics, bgPick, bgAsked } = this.state;
     try { localStorage.setItem(KEY, JSON.stringify({ mode, size, theme, motion, showHint, stats, player, players, lb, haptics, bgPick, bgAsked, game: game && { ...game, tiles: game.tiles.filter(t => !t.gone) } })); } catch (e) {}
